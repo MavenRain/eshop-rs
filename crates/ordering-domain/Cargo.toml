@@ -1,0 +1,14 @@
+[package]
+name = "ordering-domain"
+description = "Ordering bounded context: aggregates, value objects, domain events"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+comp-cat-rs.workspace = true
+
+[lints]
+workspace = true
