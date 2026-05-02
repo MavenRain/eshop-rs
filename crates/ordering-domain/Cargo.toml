@@ -8,7 +8,9 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-comp-cat-rs.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true
