@@ -16,8 +16,10 @@ pub mod bus;
 pub mod error;
 pub mod event;
 pub mod in_memory;
+pub mod subscriber;
 
 pub use bus::EventBus;
 pub use error::Error;
 pub use event::{IntegrationEvent, IntegrationEventMetadata};
 pub use in_memory::InMemoryEventBus;
+pub use subscriber::EventBusSubscriber;

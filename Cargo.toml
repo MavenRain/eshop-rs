@@ -22,6 +22,7 @@ serde = { version = "1", default-features = false, features = ["std", "derive"] 
 serde_json = { version = "1", default-features = false, features = ["std"] }
 lapin = { version = "2", default-features = false }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros"] }
+futures-lite = { version = "2", default-features = false, features = ["std"] }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }
