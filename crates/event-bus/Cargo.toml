@@ -1,0 +1,17 @@
+[package]
+name = "event-bus"
+description = "Abstractions for an integration event bus: traits, errors, and an in-memory test impl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+comp-cat-rs.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

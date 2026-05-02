@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["crates/ordering-domain"]
+members = [
+    "crates/event-bus",
+    "crates/event-bus-rabbitmq",
+    "crates/ordering-domain",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -11,9 +15,13 @@ repository = "https://github.com/MavenRain/eshop-rs"
 
 [workspace.dependencies]
 comp-cat-rs = { path = "../comp-cat-rs" }
-chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-rust_decimal = { version = "1", default-features = false, features = ["std"] }
-uuid = { version = "1", default-features = false, features = ["v4", "std"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+rust_decimal = { version = "1", default-features = false, features = ["std", "serde"] }
+uuid = { version = "1", default-features = false, features = ["v4", "std", "serde"] }
+serde = { version = "1", default-features = false, features = ["std", "derive"] }
+serde_json = { version = "1", default-features = false, features = ["std"] }
+lapin = { version = "2", default-features = false }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros"] }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }
