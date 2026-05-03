@@ -336,6 +336,73 @@ impl CatalogItem {
             ..self
         }
     }
+
+    /// Apply a wholesale update from an admin endpoint.  Validates the
+    /// stock/threshold invariants and emits a
+    /// [`ProductPriceChangedEvent`] iff `price` differs from the
+    /// current price.  `on_reorder` is preserved (a wholesale update
+    /// is metadata-driven, not a restock).
+    ///
+    /// # Errors
+    /// - [`Error::RestockExceedsMax`] if `restock_threshold` is
+    ///   strictly greater than `max_stock_threshold`.
+    /// - [`Error::InitialStockExceedsMax`] if `available_stock` is
+    ///   strictly greater than `max_stock_threshold`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn apply_update(
+        self,
+        name: ItemName,
+        description: Option<ItemDescription>,
+        price: Price,
+        picture_file_name: Option<PictureFileName>,
+        brand_id: CatalogBrandId,
+        kind_id: CatalogKindId,
+        available_stock: Stock,
+        restock_threshold: RestockThreshold,
+        max_stock_threshold: MaxStockThreshold,
+    ) -> Result<Self, Error> {
+        let restock_n = u32::from(restock_threshold);
+        let max_n = u32::from(max_stock_threshold);
+        let stock_n = u32::from(available_stock);
+        match () {
+            () if restock_n > max_n => Err(Error::RestockExceedsMax {
+                restock: restock_n,
+                max: max_n,
+            }),
+            () if stock_n > max_n => Err(Error::InitialStockExceedsMax {
+                stock: stock_n,
+                max: max_n,
+            }),
+            () => {
+                let domain_events = if price == self.price {
+                    self.domain_events
+                } else {
+                    let event = DomainEvent::ProductPriceChanged(ProductPriceChangedEvent::new(
+                        self.id, price, self.price,
+                    ));
+                    let prior = self.domain_events;
+                    let mut next = Vec::with_capacity(prior.len() + 1);
+                    next.extend(prior);
+                    next.push(event);
+                    next
+                };
+                Ok(Self {
+                    id: self.id,
+                    name,
+                    description,
+                    price,
+                    picture_file_name,
+                    brand_id,
+                    kind_id,
+                    available_stock,
+                    restock_threshold,
+                    max_stock_threshold,
+                    on_reorder: self.on_reorder,
+                    domain_events,
+                })
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -504,5 +571,77 @@ mod tests {
         check(drained.domain_events().is_empty(), || {
             "events not drained".to_string()
         })
+    }
+
+    #[test]
+    fn apply_update_emits_event_when_price_changes() -> Result<(), Error> {
+        let item = sample_item(10, 100)?;
+        let new_price = Price::new(Decimal::from(99))?;
+        let updated = item.apply_update(
+            ItemName::try_from("Updated Hoodie")?,
+            Some(ItemDescription::try_from("Updated description")?),
+            new_price,
+            None,
+            CatalogBrandId::new(),
+            CatalogKindId::new(),
+            Stock::from(50),
+            RestockThreshold::from(10),
+            MaxStockThreshold::from(150),
+        )?;
+        check(updated.price() == new_price, || {
+            "price not updated".to_string()
+        })?;
+        check(updated.domain_events().len() == 1, || {
+            format!("expected 1 event, got {}", updated.domain_events().len())
+        })?;
+        check(updated.name().as_str() == "Updated Hoodie", || {
+            "name not updated".to_string()
+        })
+    }
+
+    #[test]
+    fn apply_update_no_event_when_price_unchanged() -> Result<(), Error> {
+        let item = sample_item(10, 100)?;
+        let same_price = item.price();
+        let updated = item.apply_update(
+            ItemName::try_from("Renamed")?,
+            None,
+            same_price,
+            None,
+            CatalogBrandId::new(),
+            CatalogKindId::new(),
+            Stock::from(10),
+            RestockThreshold::from(0),
+            MaxStockThreshold::from(100),
+        )?;
+        check(updated.domain_events().is_empty(), || {
+            format!("expected 0 events, got {}", updated.domain_events().len())
+        })
+    }
+
+    #[test]
+    fn apply_update_rejects_invalid_thresholds() -> Result<(), Error> {
+        let item = sample_item(10, 100)?;
+        let outcome = item.apply_update(
+            ItemName::try_from("X")?,
+            None,
+            Price::new(Decimal::from(20))?,
+            None,
+            CatalogBrandId::new(),
+            CatalogKindId::new(),
+            Stock::from(0),
+            RestockThreshold::from(50),
+            MaxStockThreshold::from(10),
+        );
+        check(
+            matches!(
+                outcome,
+                Err(Error::RestockExceedsMax {
+                    restock: 50,
+                    max: 10
+                })
+            ),
+            || format!("expected RestockExceedsMax, got {outcome:?}"),
+        )
     }
 }

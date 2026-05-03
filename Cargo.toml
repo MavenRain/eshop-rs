@@ -28,7 +28,7 @@ tokio = { version = "1", default-features = false, features = ["rt-multi-thread"
 futures-lite = { version = "2", default-features = false, features = ["std"] }
 toasty = { path = "../toasty/crates/toasty", features = ["sqlite", "postgresql", "jiff", "rust_decimal"] }
 jiff = { version = "0.2", default-features = false, features = ["std"] }
-axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "matched-path"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "matched-path", "query"] }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }

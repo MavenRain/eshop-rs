@@ -11,6 +11,7 @@
 //! `units: i64` precedent in `ordering-infrastructure`'s
 //! `OrderItemRow`; the mapper layer enforces the `u32` round-trip.
 
+use jiff::Timestamp;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -59,4 +60,27 @@ pub struct CatalogKindRow {
     pub id: Uuid,
 
     pub name: String,
+}
+
+/// Catalog-side outbox row.  Distinct from
+/// `ordering-infrastructure::IntegrationEventLogRow` so toasty model
+/// inventory registers two separate tables; mirrors upstream eShop's
+/// per-service outbox table convention.
+#[derive(Debug, toasty::Model)]
+pub struct CatalogIntegrationEventLogRow {
+    #[key]
+    pub event_id: Uuid,
+
+    pub event_type_name: String,
+
+    pub state: String,
+
+    pub times_sent: i64,
+
+    pub creation_time: Timestamp,
+
+    pub content: String,
+
+    #[index]
+    pub transaction_id: Uuid,
 }
