@@ -20,9 +20,9 @@ The port mirrors eShop's bounded contexts as a Cargo workspace.  Crates land in 
 | Crate | Upstream | Status |
 |---|---|---|
 | `ordering-domain` | `Ordering.Domain` | scaffolded |
-| `event-bus` + `event-bus-rabbitmq` | `EventBus` + `EventBusRabbitMQ` | pending |
-| `ordering-infrastructure` | `Ordering.Infrastructure` + `IntegrationEventLogEF` | pending |
-| `ordering-api` | `Ordering.API` | pending |
+| `event-bus` + `event-bus-rabbitmq` | `EventBus` + `EventBusRabbitMQ` | scaffolded |
+| `ordering-infrastructure` | `Ordering.Infrastructure` + `IntegrationEventLogEF` | scaffolded |
+| `ordering-api` | `Ordering.API` | scaffolded |
 | `catalog` | `Catalog.API` | pending |
 | `basket` | `Basket.API` | pending |
 | `identity` | `Identity.API` | pending |
