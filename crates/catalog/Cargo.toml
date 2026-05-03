@@ -1,0 +1,16 @@
+[package]
+name = "catalog"
+description = "Catalog bounded context: domain types, persistence, and HTTP API"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+chrono.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

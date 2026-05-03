@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/catalog",
     "crates/event-bus",
     "crates/event-bus-rabbitmq",
     "crates/ordering-api",
