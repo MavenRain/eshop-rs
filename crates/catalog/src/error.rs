@@ -1,6 +1,14 @@
-//! Domain error type for the Catalog bounded context.
+//! Crate error type for the Catalog bounded context.
+//!
+//! Covers both domain validation (constructor invariants on
+//! [`CatalogItem`](crate::item::CatalogItem) etc.) and the persistence
+//! layer (toasty-backed repositories).  Domain-only callers can match on
+//! the `EmptyString` / `NegativePrice` / `OutOfStock` /
+//! `RestockExceedsMax` / `InitialStockExceedsMax` / `StockOverflow` /
+//! `InvariantViolated` variants and ignore the rest; the persistence
+//! variants only fire from the `row` / `mapper` / `repository` modules.
 
-/// Errors produced by Catalog domain operations.
+/// Errors produced by Catalog operations (domain + persistence).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// Construction of a non-empty string failed because the input was empty.
@@ -18,6 +26,12 @@ pub enum Error {
     StockOverflow,
     /// A domain invariant was violated; carries a human-readable reason.
     InvariantViolated { reason: String },
+    /// Failure inside toasty.
+    Toasty { reason: String },
+    /// Numeric out-of-range for the target type when reading from a row.
+    NumericRange { context: String },
+    /// A persisted column held a value the loader could not interpret.
+    InvalidPersistedValue { context: String, value: String },
 }
 
 impl core::fmt::Display for Error {
@@ -37,8 +51,21 @@ impl core::fmt::Display for Error {
             }
             Self::StockOverflow => write!(f, "stock arithmetic overflowed"),
             Self::InvariantViolated { reason } => write!(f, "invariant violated: {reason}"),
+            Self::Toasty { reason } => write!(f, "toasty error: {reason}"),
+            Self::NumericRange { context } => write!(f, "numeric out of range at {context}"),
+            Self::InvalidPersistedValue { context, value } => {
+                write!(f, "invalid persisted value at {context}: {value}")
+            }
         }
     }
 }
 
 impl std::error::Error for Error {}
+
+impl From<toasty::Error> for Error {
+    fn from(e: toasty::Error) -> Self {
+        Self::Toasty {
+            reason: e.to_string(),
+        }
+    }
+}

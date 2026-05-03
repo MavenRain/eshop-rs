@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 chrono.workspace = true
 rust_decimal.workspace = true
+toasty.workspace = true
 uuid.workspace = true
 
 [lints]
