@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 ordering-domain = { path = "../ordering-domain" }
 ordering-infrastructure = { path = "../ordering-infrastructure" }
+ordering-integration-events = { path = "../ordering-integration-events" }
 event-bus = { path = "../event-bus" }
 toasty.workspace = true
 axum.workspace = true

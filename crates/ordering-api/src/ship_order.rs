@@ -32,11 +32,15 @@ pub async fn handle(
     .await?;
     let (_drained, events) = shipped.take_events();
     let transaction_id = Uuid::new_v4();
-    // Sequential async insert; FFI exception (see ordering-infrastructure).
-    for event in &events {
-        let pending = domain_event_to_pending(event, transaction_id);
-        IntegrationEventLogService::save_event(&mut tx, pending).await?;
-    }
+    // `filter_map` + `Result::transpose` drops domain events that have no
+    // integration counterpart (currently `BuyerPaymentMethodVerified`)
+    // and propagates serialization errors; `save_events_batch` then
+    // performs the sequential insert behind a single API call.
+    let pendings: Vec<ordering_infrastructure::PendingEventLog> = events
+        .iter()
+        .filter_map(|event| domain_event_to_pending(event, transaction_id).transpose())
+        .collect::<Result<Vec<_>, _>>()?;
+    IntegrationEventLogService::save_events_batch(&mut tx, pendings).await?;
     tx.commit().await?;
 
     Ok(StatusCode::OK)

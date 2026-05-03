@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use uuid::Uuid;
 
 use crate::error::Error;
-use crate::integration_event_log::IntegrationEventLogService;
+use crate::integration_event_log::{IntegrationEventLogService, PendingEventLog};
 use crate::item::CatalogItemId;
 use crate::outbox::domain_event_to_pending;
 use crate::repository::CatalogItemRepository;
@@ -34,18 +34,15 @@ pub async fn handle(
 
     CatalogItemRepository::update(&mut tx, &cleaned).await?;
 
-    // `CatalogItem::apply_update` emits at most one `ProductPriceChanged`
-    // event per call, so the outbox write is a single optional projection
-    // rather than an iteration.  If the catalog domain grows multi-event
-    // updates later, swap this for a fold-style helper.
+    // Project every emitted domain event into an outbox row, then hand
+    // the batch to `save_events_batch`, which encapsulates the only
+    // sequential-async insert in this code path.
     let transaction_id = Uuid::new_v4();
-    let pending = events
-        .first()
-        .map(|event| domain_event_to_pending(event, transaction_id));
-    match pending {
-        None => Ok(()),
-        Some(p) => IntegrationEventLogService::save_event(&mut tx, p).await,
-    }?;
+    let pendings: Vec<PendingEventLog> = events
+        .iter()
+        .map(|event| domain_event_to_pending(event, transaction_id))
+        .collect();
+    IntegrationEventLogService::save_events_batch(&mut tx, pendings).await?;
 
     tx.commit().await?;
     Ok(StatusCode::OK)

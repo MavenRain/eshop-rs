@@ -210,6 +210,30 @@ impl IntegrationEventLogService {
         Ok(())
     }
 
+    /// Insert a batch of outbox rows in a single transaction.  Identical
+    /// semantics to calling [`save_event`](Self::save_event) once per row.
+    ///
+    /// The internal sequential await is the localized FFI exception
+    /// permitted because each iteration consumes `&mut executor` (toasty's
+    /// `Executor` requires `&mut self`).  Concentrating the loop here
+    /// keeps the API-layer call sites combinator-only.
+    ///
+    /// # Errors
+    /// Propagates toasty and mapping errors; the first error short-circuits
+    /// the batch.
+    pub async fn save_events_batch<E>(
+        executor: &mut E,
+        logs: Vec<PendingEventLog>,
+    ) -> Result<(), Error>
+    where
+        E: toasty::Executor,
+    {
+        for log in logs {
+            Self::save_event(executor, log).await?;
+        }
+        Ok(())
+    }
+
     /// Retrieve every [`EventState::NotPublished`] row attached to
     /// `transaction_id`, oldest first.
     ///

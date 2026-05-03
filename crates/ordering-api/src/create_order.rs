@@ -45,12 +45,16 @@ async fn write_events<E>(
 where
     E: toasty::Executor,
 {
-    // Sequential async insert; localized FFI exception (see
-    // `ordering-infrastructure::OrderRepository::add` and
-    // `event-bus-rabbitmq::bind_all`).
-    for event in events {
-        let pending = domain_event_to_pending(event, transaction_id);
-        IntegrationEventLogService::save_event(executor, pending).await?;
-    }
+    // Project events into outbox rows using `filter_map` + `Result::transpose`:
+    // domain events without an integration counterpart (currently
+    // `BuyerPaymentMethodVerified`) drop out as `None`, errors propagate
+    // through the `collect::<Result<_, _>>()`.  The sequential async insert
+    // is encapsulated by `save_events_batch` so this function stays
+    // combinator-only.
+    let pendings: Vec<ordering_infrastructure::PendingEventLog> = events
+        .iter()
+        .filter_map(|event| domain_event_to_pending(event, transaction_id).transpose())
+        .collect::<Result<Vec<_>, _>>()?;
+    IntegrationEventLogService::save_events_batch(executor, pendings).await?;
     Ok(())
 }
