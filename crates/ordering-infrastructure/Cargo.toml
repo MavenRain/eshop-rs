@@ -1,0 +1,25 @@
+[package]
+name = "ordering-infrastructure"
+description = "Toasty-backed persistence and transactional outbox for the Ordering bounded context"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+ordering-domain = { path = "../ordering-domain" }
+event-bus = { path = "../event-bus" }
+toasty.workspace = true
+chrono.workspace = true
+jiff.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

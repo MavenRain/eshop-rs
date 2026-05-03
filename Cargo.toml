@@ -4,6 +4,7 @@ members = [
     "crates/event-bus",
     "crates/event-bus-rabbitmq",
     "crates/ordering-domain",
+    "crates/ordering-infrastructure",
 ]
 
 [workspace.package]
@@ -23,6 +24,8 @@ serde_json = { version = "1", default-features = false, features = ["std"] }
 lapin = { version = "2", default-features = false }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros"] }
 futures-lite = { version = "2", default-features = false, features = ["std"] }
+toasty = { path = "../toasty/crates/toasty", features = ["sqlite", "postgresql", "jiff", "rust_decimal"] }
+jiff = { version = "0.2", default-features = false, features = ["std"] }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }

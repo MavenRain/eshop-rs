@@ -137,6 +137,35 @@ pub struct Order {
 }
 
 impl Order {
+    /// Rehydrate an order from persisted state.  No invariant checks are
+    /// performed beyond what the caller's newtypes already enforce; the
+    /// `domain_events` list is reset to empty.  Use this only at the
+    /// persistence boundary.
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
+    pub fn rehydrate(
+        id: OrderId,
+        order_date: OrderDate,
+        address: Address,
+        buyer_id: Option<BuyerId>,
+        order_status: OrderStatus,
+        description: Description,
+        order_items: Vec<OrderItem>,
+        payment_id: Option<PaymentMethodId>,
+    ) -> Self {
+        Self {
+            id,
+            order_date,
+            address,
+            buyer_id,
+            order_status,
+            description,
+            order_items,
+            payment_id,
+            domain_events: Vec::new(),
+        }
+    }
+
     /// Submit a new order, emitting [`DomainEvent::OrderStarted`].  The
     /// resulting order has [`OrderStatus::Submitted`] and an empty item list.
     #[allow(clippy::too_many_arguments)]

@@ -35,6 +35,22 @@ impl OrderStatus {
             Self::Cancelled => 6,
         }
     }
+
+    /// Parse the [`Display`](fmt::Display) wire form.  Returns `None` if
+    /// `s` is not one of the known status names; callers wrap the `None`
+    /// in their own context-specific error variant.
+    #[must_use]
+    pub fn parse_display(s: &str) -> Option<Self> {
+        match s {
+            "Submitted" => Some(Self::Submitted),
+            "AwaitingValidation" => Some(Self::AwaitingValidation),
+            "StockConfirmed" => Some(Self::StockConfirmed),
+            "Paid" => Some(Self::Paid),
+            "Shipped" => Some(Self::Shipped),
+            "Cancelled" => Some(Self::Cancelled),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for OrderStatus {
