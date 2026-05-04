@@ -22,4 +22,4 @@ pub mod bus;
 pub mod config;
 
 pub use bus::RabbitMqEventBus;
-pub use config::{ExchangeName, RmqConfig};
+pub use config::{ExchangeName, QueueName, RmqConfig};

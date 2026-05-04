@@ -13,17 +13,18 @@
 //!   to the bus.
 //! - [`Error`]: hand-rolled crate error.
 //!
-//! `*Row` types are crate-private; the public surface speaks the
-//! [`ordering_domain`] aggregates.  Toasty model registration is handled by
-//! `toasty::models!(...)` at the application's `Db::builder` site, which
-//! discovers our row types via the inventory submitted by `#[derive(Model)]`.
+//! `*Row` types live in the public [`row`] module so the application
+//! [`Db::builder`](toasty::Db::builder) site can register them via
+//! `toasty::models!(...)`.  The repositories and the public surface
+//! speak the [`ordering_domain`] aggregates rather than rows; rows are
+//! exposed only for schema registration.
 
 mod buyer_repository;
 mod error;
 mod integration_event_log;
 mod mapper;
 mod order_repository;
-mod row;
+pub mod row;
 mod time;
 
 pub use buyer_repository::BuyerRepository;

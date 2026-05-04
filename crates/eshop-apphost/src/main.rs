@@ -1,0 +1,190 @@
+//! `eShop` `AppHost` binary.
+//!
+//! Replaces upstream's .NET Aspire `eShop.AppHost`: a single tokio
+//! process that owns the toasty [`Db`], constructs the per-context
+//! [`RabbitMqEventBus`] handles, and spawns three concurrent tasks:
+//!
+//! 1. The combined [`axum`] HTTP server, mounting both the Ordering
+//!    and Catalog routers under one [`Router`].
+//! 2. The Ordering outbox publisher loop.
+//! 3. The Catalog outbox publisher loop.
+//!
+//! Both publisher loops are driven combinator-style via
+//! [`futures_lite::stream::unfold`]: each cycle calls
+//! [`drain_once`](ordering_processor::OrderProcessor::drain_once)
+//! (resp. [`catalog_processor::CatalogProcessor::drain_once`]),
+//! logs any persistence error, and sleeps for the configured poll
+//! interval.  The [`Stream`](futures_lite::Stream) is then drained by
+//! [`for_each`](futures_lite::stream::StreamExt::for_each), which is
+//! the one combinator that turns an infinite stream of `()` items into
+//! the long-running task body.
+//!
+//! Configuration is loaded once at startup from environment variables
+//! ([`Config::from_env`]); see `config.rs` for variable names and
+//! defaults.
+
+mod config;
+mod error;
+
+use std::sync::Arc;
+
+use axum::Router;
+use catalog::row::{
+    CatalogBrandRow, CatalogIntegrationEventLogRow, CatalogItemRow, CatalogKindRow,
+};
+use catalog_integration_events::CatalogIntegrationEvent;
+use catalog_processor::CatalogProcessor;
+use event_bus::EventBus;
+use event_bus_rabbitmq::RabbitMqEventBus;
+use futures_lite::stream::StreamExt;
+use ordering_infrastructure::row::{
+    BuyerRow, IntegrationEventLogRow, OrderItemRow, OrderRow, PaymentMethodRow,
+};
+use ordering_integration_events::OrderingIntegrationEvent;
+use ordering_processor::OrderProcessor;
+use toasty::Db;
+use toasty_driver_sqlite::Sqlite;
+
+use crate::config::Config;
+use crate::error::Error;
+
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> Result<(), Error> {
+    let config = Config::from_env()?;
+    let db = Arc::new(build_db().await?);
+
+    let ordering_state = ordering_api::AppState::new(db.clone());
+    let catalog_state = catalog::AppState::new(db.clone());
+
+    let ordering_bus =
+        RabbitMqEventBus::<OrderingIntegrationEvent>::connect(config.ordering_rmq())?;
+    let catalog_bus = RabbitMqEventBus::<CatalogIntegrationEvent>::connect(config.catalog_rmq())?;
+
+    let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());
+    let catalog_processor = CatalogProcessor::new(catalog_bus, db.clone(), config.poll_interval());
+
+    let app = build_router(ordering_state, catalog_state);
+    let bind_address = config.bind_address().to_string();
+
+    let http = tokio::spawn(serve_http(app, bind_address));
+    let ordering_loop = tokio::spawn(run_ordering_loop(ordering_processor));
+    let catalog_loop = tokio::spawn(run_catalog_loop(catalog_processor));
+
+    let (http_outcome, ordering_outcome, catalog_outcome) =
+        tokio::join!(http, ordering_loop, catalog_loop);
+    http_outcome.map_err(|e| Error::Join {
+        reason: format!("http: {e}"),
+    })??;
+    ordering_outcome.map_err(|e| Error::Join {
+        reason: format!("ordering: {e}"),
+    })?;
+    catalog_outcome.map_err(|e| Error::Join {
+        reason: format!("catalog: {e}"),
+    })?;
+    Ok(())
+}
+
+/// Build a fresh in-memory toasty [`Db`] with every row model from
+/// both bounded contexts registered.  Production deployments swap
+/// the [`Sqlite::in_memory`] driver for a postgres URL, but the
+/// model registration stays identical.
+async fn build_db() -> Result<Db, Error> {
+    let driver = Sqlite::in_memory();
+    let db = Db::builder()
+        .models(toasty::models!(
+            OrderRow,
+            OrderItemRow,
+            BuyerRow,
+            PaymentMethodRow,
+            IntegrationEventLogRow,
+            CatalogItemRow,
+            CatalogBrandRow,
+            CatalogKindRow,
+            CatalogIntegrationEventLogRow,
+        ))
+        .build(driver)
+        .await?;
+    Ok(db)
+}
+
+/// Build the combined axum router that hosts every API route.
+///
+/// Both the ordering and catalog routers are mounted at the root; the
+/// two crates pick non-overlapping prefixes (`/orders*` for ordering,
+/// `/api/catalog/*` for catalog), so a single [`Router::merge`] is
+/// enough.
+fn build_router(
+    ordering_state: ordering_api::AppState,
+    catalog_state: catalog::AppState,
+) -> Router {
+    Router::new()
+        .merge(ordering_api::build_router(ordering_state))
+        .merge(catalog::build_router(catalog_state))
+}
+
+/// Bind the listener and run the axum server until the process is
+/// signalled.
+async fn serve_http(app: Router, bind_address: String) -> Result<(), Error> {
+    let listener = tokio::net::TcpListener::bind(&bind_address)
+        .await
+        .map_err(|e| Error::Bind {
+            reason: format!("{bind_address}: {e}"),
+        })?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .map_err(|e| Error::Serve {
+            reason: e.to_string(),
+        })
+}
+
+/// Resolve when the process receives SIGINT (Ctrl+C).
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .ok()
+        .iter()
+        .for_each(|()| eprintln!("ctrl-c received, shutting down"));
+}
+
+/// Drive [`OrderProcessor::drain_once`] on the configured cadence
+/// forever.  Persistence errors are logged to stderr; the loop never
+/// exits on its own (the surrounding tokio task is cancelled at
+/// shutdown).
+async fn run_ordering_loop<B>(processor: OrderProcessor<B>)
+where
+    B: EventBus<OrderingIntegrationEvent> + Send + Sync + 'static,
+{
+    futures_lite::stream::unfold(processor, |proc| async move {
+        let outcome = proc.drain_once().await;
+        outcome
+            .as_ref()
+            .err()
+            .iter()
+            .for_each(|err| eprintln!("ordering drain failed: {err}"));
+        tokio::time::sleep(proc.poll_interval()).await;
+        Some(((), proc))
+    })
+    .for_each(|()| ())
+    .await;
+}
+
+/// Drive [`CatalogProcessor::drain_once`] on the configured cadence
+/// forever.  Mirror of [`run_ordering_loop`].
+async fn run_catalog_loop<B>(processor: CatalogProcessor<B>)
+where
+    B: EventBus<CatalogIntegrationEvent> + Send + Sync + 'static,
+{
+    futures_lite::stream::unfold(processor, |proc| async move {
+        let outcome = proc.drain_once().await;
+        outcome
+            .as_ref()
+            .err()
+            .iter()
+            .for_each(|err| eprintln!("catalog drain failed: {err}"));
+        tokio::time::sleep(proc.poll_interval()).await;
+        Some(((), proc))
+    })
+    .for_each(|()| ())
+    .await;
+}

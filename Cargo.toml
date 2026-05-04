@@ -11,6 +11,7 @@ members = [
     "crates/ordering-processor",
     "crates/catalog-integration-events",
     "crates/catalog-processor",
+    "crates/eshop-apphost",
 ]
 
 [workspace.package]
@@ -28,7 +29,8 @@ uuid = { version = "1", default-features = false, features = ["v4", "std", "serd
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 lapin = { version = "2", default-features = false }
-tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros", "time", "net", "signal"] }
+toasty-driver-sqlite = { path = "../toasty/crates/toasty-driver-sqlite" }
 futures-lite = { version = "2", default-features = false, features = ["std"] }
 toasty = { path = "../toasty/crates/toasty", features = ["sqlite", "postgresql", "jiff", "rust_decimal"] }
 jiff = { version = "0.2", default-features = false, features = ["std"] }

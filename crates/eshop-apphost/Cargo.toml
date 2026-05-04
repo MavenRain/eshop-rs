@@ -1,0 +1,31 @@
+[package]
+name = "eshop-apphost"
+description = "Process host wiring the eShop bounded contexts together"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "eshop-apphost"
+path = "src/main.rs"
+
+[dependencies]
+catalog = { path = "../catalog" }
+catalog-integration-events = { path = "../catalog-integration-events" }
+catalog-processor = { path = "../catalog-processor" }
+event-bus = { path = "../event-bus" }
+event-bus-rabbitmq = { path = "../event-bus-rabbitmq" }
+ordering-api = { path = "../ordering-api" }
+ordering-infrastructure = { path = "../ordering-infrastructure" }
+ordering-integration-events = { path = "../ordering-integration-events" }
+ordering-processor = { path = "../ordering-processor" }
+axum.workspace = true
+futures-lite.workspace = true
+toasty.workspace = true
+toasty-driver-sqlite.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

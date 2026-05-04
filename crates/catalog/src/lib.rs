@@ -46,7 +46,7 @@ mod outbox;
 mod repository;
 pub mod request;
 pub mod response;
-mod row;
+pub mod row;
 mod state;
 pub mod stock;
 pub mod strings;
