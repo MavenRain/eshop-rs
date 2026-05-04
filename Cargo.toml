@@ -9,6 +9,7 @@ members = [
     "crates/ordering-infrastructure",
     "crates/ordering-integration-events",
     "crates/ordering-processor",
+    "crates/ordering-subscribers",
     "crates/catalog-integration-events",
     "crates/catalog-processor",
     "crates/catalog-subscribers",

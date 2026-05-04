@@ -1,0 +1,21 @@
+[package]
+name = "ordering-subscribers"
+description = "Ordering-side handlers for integration events emitted by other bounded contexts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+basket-integration-events = { path = "../basket-integration-events" }
+event-bus = { path = "../event-bus" }
+comp-cat-rs.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

@@ -22,6 +22,7 @@ pub struct Config {
     catalog_queue: QueueName,
     catalog_subscriber_queue: QueueName,
     basket_queue: QueueName,
+    ordering_subscriber_queue: QueueName,
     poll_interval: Duration,
 }
 
@@ -44,6 +45,10 @@ impl Config {
             "eshop-catalog-subscriber-queue",
         ));
         let basket_queue = QueueName::from(read_string("ESHOP_BASKET_QUEUE", "eshop-basket-queue"));
+        let ordering_subscriber_queue = QueueName::from(read_string(
+            "ESHOP_ORDERING_SUBSCRIBER_QUEUE",
+            "eshop-ordering-subscriber-queue",
+        ));
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
@@ -53,6 +58,7 @@ impl Config {
             catalog_queue,
             catalog_subscriber_queue,
             basket_queue,
+            ordering_subscriber_queue,
             poll_interval,
         })
     }
@@ -102,6 +108,18 @@ impl Config {
             self.amqp_uri.clone(),
             self.exchange.clone(),
             self.basket_queue.clone(),
+        )
+    }
+
+    /// Build the [`RmqConfig`] for the Ordering-side subscriber that
+    /// consumes basket integration events.  Distinct queue from the
+    /// ordering publisher so the two consumer groups stay independent.
+    #[must_use]
+    pub fn ordering_subscriber_rmq(&self) -> RmqConfig {
+        RmqConfig::new(
+            self.amqp_uri.clone(),
+            self.exchange.clone(),
+            self.ordering_subscriber_queue.clone(),
         )
     }
 

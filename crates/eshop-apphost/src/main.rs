@@ -48,6 +48,7 @@ use ordering_infrastructure::row::{
 };
 use ordering_integration_events::OrderingIntegrationEvent;
 use ordering_processor::OrderProcessor;
+use ordering_subscribers::OrderingConsumedBasketEvent;
 use toasty::Db;
 use toasty_driver_sqlite::Sqlite;
 
@@ -76,6 +77,14 @@ async fn main() -> Result<(), Error> {
         RabbitMqEventBus::<CatalogConsumedOrderingEvent>::connect(config.catalog_subscriber_rmq())?;
     catalog_subscriber_bus
         .subscribe(catalog_subscribers::handle)
+        .run()?;
+
+    // Ordering-side subscriber to basket events.  Same lifecycle
+    // contract as `catalog_subscriber_bus`.
+    let ordering_subscriber_bus =
+        RabbitMqEventBus::<OrderingConsumedBasketEvent>::connect(config.ordering_subscriber_rmq())?;
+    ordering_subscriber_bus
+        .subscribe(ordering_subscribers::handle)
         .run()?;
 
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());
