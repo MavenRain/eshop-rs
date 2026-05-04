@@ -1,0 +1,23 @@
+[package]
+name = "ordering-processor"
+description = "Outbox publisher worker for the Ordering bounded context"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+event-bus = { path = "../event-bus" }
+ordering-infrastructure = { path = "../ordering-infrastructure" }
+ordering-integration-events = { path = "../ordering-integration-events" }
+chrono.workspace = true
+comp-cat-rs.workspace = true
+futures-lite.workspace = true
+serde_json.workspace = true
+toasty.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true
