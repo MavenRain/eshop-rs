@@ -136,6 +136,30 @@ pub struct EventLog {
 }
 
 impl EventLog {
+    /// Construct from raw fields.  Used by tests, by the publisher
+    /// worker when synthesizing rows for retry, and by future tooling
+    /// that materializes outbox entries from ad-hoc sources.
+    #[must_use]
+    pub fn new(
+        event_id: Uuid,
+        event_type_name: String,
+        creation_time: DateTime<Utc>,
+        content: String,
+        transaction_id: Uuid,
+        state: EventState,
+        times_sent: i64,
+    ) -> Self {
+        Self {
+            event_id,
+            event_type_name,
+            creation_time,
+            content,
+            transaction_id,
+            state,
+            times_sent,
+        }
+    }
+
     /// Event identifier.
     #[must_use]
     pub fn event_id(&self) -> Uuid {
@@ -241,6 +265,26 @@ impl IntegrationEventLogService {
             Self::save_event(executor, log).await?;
         }
         Ok(())
+    }
+
+    /// Retrieve every [`EventState::NotPublished`] row across the entire
+    /// outbox, regardless of `transaction_id`.  Used by the publisher
+    /// worker, which polls without knowing which transactions emitted
+    /// the rows.
+    ///
+    /// # Errors
+    /// Propagates toasty and time-conversion errors.
+    pub async fn retrieve_all_pending<E>(executor: &mut E) -> Result<Vec<EventLog>, Error>
+    where
+        E: toasty::Executor,
+    {
+        let target_state = EventState::NotPublished.as_persisted().to_string();
+        let rows: Vec<CatalogIntegrationEventLogRow> = toasty::query!(
+            CatalogIntegrationEventLogRow FILTER .state == #target_state
+        )
+        .exec(executor)
+        .await?;
+        rows.into_iter().map(row_to_log).collect()
     }
 
     /// Retrieve every [`EventState::NotPublished`] row attached to

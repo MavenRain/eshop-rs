@@ -9,6 +9,8 @@ members = [
     "crates/ordering-infrastructure",
     "crates/ordering-integration-events",
     "crates/ordering-processor",
+    "crates/catalog-integration-events",
+    "crates/catalog-processor",
 ]
 
 [workspace.package]

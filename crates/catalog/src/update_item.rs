@@ -34,14 +34,15 @@ pub async fn handle(
 
     CatalogItemRepository::update(&mut tx, &cleaned).await?;
 
-    // Project every emitted domain event into an outbox row, then hand
-    // the batch to `save_events_batch`, which encapsulates the only
-    // sequential-async insert in this code path.
+    // `filter_map` + `Result::transpose` drops domain events that have no
+    // integration counterpart and propagates serialization errors;
+    // `save_events_batch` then performs the sequential insert behind a
+    // single API call.
     let transaction_id = Uuid::new_v4();
     let pendings: Vec<PendingEventLog> = events
         .iter()
-        .map(|event| domain_event_to_pending(event, transaction_id))
-        .collect();
+        .filter_map(|event| domain_event_to_pending(event, transaction_id).transpose())
+        .collect::<Result<Vec<_>, _>>()?;
     IntegrationEventLogService::save_events_batch(&mut tx, pendings).await?;
 
     tx.commit().await?;
