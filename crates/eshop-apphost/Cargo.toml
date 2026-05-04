@@ -15,6 +15,7 @@ path = "src/main.rs"
 catalog = { path = "../catalog" }
 catalog-integration-events = { path = "../catalog-integration-events" }
 catalog-processor = { path = "../catalog-processor" }
+catalog-subscribers = { path = "../catalog-subscribers" }
 event-bus = { path = "../event-bus" }
 event-bus-rabbitmq = { path = "../event-bus-rabbitmq" }
 ordering-api = { path = "../ordering-api" }

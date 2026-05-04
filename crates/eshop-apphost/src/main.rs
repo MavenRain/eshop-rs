@@ -34,7 +34,8 @@ use catalog::row::{
 };
 use catalog_integration_events::CatalogIntegrationEvent;
 use catalog_processor::CatalogProcessor;
-use event_bus::EventBus;
+use catalog_subscribers::CatalogConsumedOrderingEvent;
+use event_bus::{EventBus, EventBusSubscriber};
 use event_bus_rabbitmq::RabbitMqEventBus;
 use futures_lite::stream::StreamExt;
 use ordering_infrastructure::row::{
@@ -59,6 +60,16 @@ async fn main() -> Result<(), Error> {
     let ordering_bus =
         RabbitMqEventBus::<OrderingIntegrationEvent>::connect(config.ordering_rmq())?;
     let catalog_bus = RabbitMqEventBus::<CatalogIntegrationEvent>::connect(config.catalog_rmq())?;
+
+    // Catalog-side subscriber to ordering events.  Bound at startup
+    // and held for the lifetime of `main`: the bus owns the runtime
+    // that drives the consume loop, so dropping it would cancel the
+    // subscription.
+    let catalog_subscriber_bus =
+        RabbitMqEventBus::<CatalogConsumedOrderingEvent>::connect(config.catalog_subscriber_rmq())?;
+    catalog_subscriber_bus
+        .subscribe(catalog_subscribers::handle)
+        .run()?;
 
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());
     let catalog_processor = CatalogProcessor::new(catalog_bus, db.clone(), config.poll_interval());

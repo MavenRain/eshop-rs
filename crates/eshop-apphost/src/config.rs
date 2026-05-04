@@ -20,6 +20,7 @@ pub struct Config {
     exchange: ExchangeName,
     ordering_queue: QueueName,
     catalog_queue: QueueName,
+    catalog_subscriber_queue: QueueName,
     poll_interval: Duration,
 }
 
@@ -37,6 +38,10 @@ impl Config {
             QueueName::from(read_string("ESHOP_ORDERING_QUEUE", "eshop-ordering-queue"));
         let catalog_queue =
             QueueName::from(read_string("ESHOP_CATALOG_QUEUE", "eshop-catalog-queue"));
+        let catalog_subscriber_queue = QueueName::from(read_string(
+            "ESHOP_CATALOG_SUBSCRIBER_QUEUE",
+            "eshop-catalog-subscriber-queue",
+        ));
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
@@ -44,6 +49,7 @@ impl Config {
             exchange,
             ordering_queue,
             catalog_queue,
+            catalog_subscriber_queue,
             poll_interval,
         })
     }
@@ -71,6 +77,18 @@ impl Config {
             self.amqp_uri.clone(),
             self.exchange.clone(),
             self.catalog_queue.clone(),
+        )
+    }
+
+    /// Build the [`RmqConfig`] for the Catalog-side subscriber that
+    /// consumes ordering integration events.  Distinct queue from the
+    /// catalog publisher so the two consumer groups stay independent.
+    #[must_use]
+    pub fn catalog_subscriber_rmq(&self) -> RmqConfig {
+        RmqConfig::new(
+            self.amqp_uri.clone(),
+            self.exchange.clone(),
+            self.catalog_subscriber_queue.clone(),
         )
     }
 
