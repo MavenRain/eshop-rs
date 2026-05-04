@@ -2,17 +2,19 @@
 //!
 //! Replaces upstream's .NET Aspire `eShop.AppHost`: a single tokio
 //! process that owns the toasty [`Db`], constructs the per-context
-//! [`RabbitMqEventBus`] handles, and spawns three concurrent tasks:
+//! [`RabbitMqEventBus`] handles, and spawns four concurrent tasks:
 //!
-//! 1. The combined [`axum`] HTTP server, mounting both the Ordering
-//!    and Catalog routers under one [`Router`].
+//! 1. The combined [`axum`] HTTP server, mounting the ordering,
+//!    catalog, and basket routers under one [`Router`].
 //! 2. The Ordering outbox publisher loop.
 //! 3. The Catalog outbox publisher loop.
+//! 4. The Basket outbox publisher loop.
 //!
-//! Both publisher loops are driven combinator-style via
+//! All three publisher loops are driven combinator-style via
 //! [`futures_lite::stream::unfold`]: each cycle calls
 //! [`drain_once`](ordering_processor::OrderProcessor::drain_once)
-//! (resp. [`catalog_processor::CatalogProcessor::drain_once`]),
+//! (resp. [`catalog_processor::CatalogProcessor::drain_once`],
+//! [`basket_processor::BasketProcessor::drain_once`]),
 //! logs any persistence error, and sleeps for the configured poll
 //! interval.  The [`Stream`](futures_lite::Stream) is then drained by
 //! [`for_each`](futures_lite::stream::StreamExt::for_each), which is
@@ -30,6 +32,8 @@ use std::sync::Arc;
 
 use axum::Router;
 use basket::row::{BasketIntegrationEventLogRow, BasketItemRow, CustomerBasketRow};
+use basket_integration_events::BasketIntegrationEvent;
+use basket_processor::BasketProcessor;
 use catalog::row::{
     CatalogBrandRow, CatalogIntegrationEventLogRow, CatalogItemRow, CatalogKindRow,
 };
@@ -62,6 +66,7 @@ async fn main() -> Result<(), Error> {
     let ordering_bus =
         RabbitMqEventBus::<OrderingIntegrationEvent>::connect(config.ordering_rmq())?;
     let catalog_bus = RabbitMqEventBus::<CatalogIntegrationEvent>::connect(config.catalog_rmq())?;
+    let basket_bus = RabbitMqEventBus::<BasketIntegrationEvent>::connect(config.basket_rmq())?;
 
     // Catalog-side subscriber to ordering events.  Bound at startup
     // and held for the lifetime of `main`: the bus owns the runtime
@@ -75,6 +80,7 @@ async fn main() -> Result<(), Error> {
 
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());
     let catalog_processor = CatalogProcessor::new(catalog_bus, db.clone(), config.poll_interval());
+    let basket_processor = BasketProcessor::new(basket_bus, db.clone(), config.poll_interval());
 
     let app = build_router(ordering_state, catalog_state, basket_state);
     let bind_address = config.bind_address().to_string();
@@ -82,9 +88,10 @@ async fn main() -> Result<(), Error> {
     let http = tokio::spawn(serve_http(app, bind_address));
     let ordering_loop = tokio::spawn(run_ordering_loop(ordering_processor));
     let catalog_loop = tokio::spawn(run_catalog_loop(catalog_processor));
+    let basket_loop = tokio::spawn(run_basket_loop(basket_processor));
 
-    let (http_outcome, ordering_outcome, catalog_outcome) =
-        tokio::join!(http, ordering_loop, catalog_loop);
+    let (http_outcome, ordering_outcome, catalog_outcome, basket_outcome) =
+        tokio::join!(http, ordering_loop, catalog_loop, basket_loop);
     http_outcome.map_err(|e| Error::Join {
         reason: format!("http: {e}"),
     })??;
@@ -93,6 +100,9 @@ async fn main() -> Result<(), Error> {
     })?;
     catalog_outcome.map_err(|e| Error::Join {
         reason: format!("catalog: {e}"),
+    })?;
+    basket_outcome.map_err(|e| Error::Join {
+        reason: format!("basket: {e}"),
     })?;
     Ok(())
 }
@@ -200,6 +210,26 @@ where
             .err()
             .iter()
             .for_each(|err| eprintln!("catalog drain failed: {err}"));
+        tokio::time::sleep(proc.poll_interval()).await;
+        Some(((), proc))
+    })
+    .for_each(|()| ())
+    .await;
+}
+
+/// Drive [`BasketProcessor::drain_once`] on the configured cadence
+/// forever.  Mirror of [`run_ordering_loop`].
+async fn run_basket_loop<B>(processor: BasketProcessor<B>)
+where
+    B: EventBus<BasketIntegrationEvent> + Send + Sync + 'static,
+{
+    futures_lite::stream::unfold(processor, |proc| async move {
+        let outcome = proc.drain_once().await;
+        outcome
+            .as_ref()
+            .err()
+            .iter()
+            .for_each(|err| eprintln!("basket drain failed: {err}"));
         tokio::time::sleep(proc.poll_interval()).await;
         Some(((), proc))
     })

@@ -21,6 +21,7 @@ pub struct Config {
     ordering_queue: QueueName,
     catalog_queue: QueueName,
     catalog_subscriber_queue: QueueName,
+    basket_queue: QueueName,
     poll_interval: Duration,
 }
 
@@ -42,6 +43,7 @@ impl Config {
             "ESHOP_CATALOG_SUBSCRIBER_QUEUE",
             "eshop-catalog-subscriber-queue",
         ));
+        let basket_queue = QueueName::from(read_string("ESHOP_BASKET_QUEUE", "eshop-basket-queue"));
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
@@ -50,6 +52,7 @@ impl Config {
             ordering_queue,
             catalog_queue,
             catalog_subscriber_queue,
+            basket_queue,
             poll_interval,
         })
     }
@@ -92,7 +95,17 @@ impl Config {
         )
     }
 
-    /// Polling interval consulted by both processors.
+    /// Build the [`RmqConfig`] for the Basket bus.
+    #[must_use]
+    pub fn basket_rmq(&self) -> RmqConfig {
+        RmqConfig::new(
+            self.amqp_uri.clone(),
+            self.exchange.clone(),
+            self.basket_queue.clone(),
+        )
+    }
+
+    /// Polling interval consulted by every processor.
     #[must_use]
     pub fn poll_interval(&self) -> Duration {
         self.poll_interval

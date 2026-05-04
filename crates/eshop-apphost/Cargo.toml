@@ -13,6 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 basket = { path = "../basket" }
+basket-integration-events = { path = "../basket-integration-events" }
+basket-processor = { path = "../basket-processor" }
 catalog = { path = "../catalog" }
 catalog-integration-events = { path = "../catalog-integration-events" }
 catalog-processor = { path = "../catalog-processor" }
