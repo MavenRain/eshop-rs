@@ -1,14 +1,11 @@
 //! `POST /api/basket/:customer_id/checkout` handler.
 //!
-//! Loads the basket, validates it is non-empty, deletes it, and
-//! returns the snapshot the API consumer can hand to ordering.
-//!
-//! Upstream eShop publishes `UserCheckoutAcceptedIntegrationEvent` at
-//! this point and lets ordering consume it to mint an order.  Our
-//! port defers that publish to the basket integration-events / processor
-//! follow-up slice; today the response carries the full basket so an
-//! HTTP-level orchestrator (or test harness) can drive the next step
-//! synchronously.
+//! Loads the basket, validates it is non-empty, deletes it, writes a
+//! [`UserCheckoutAcceptedIntegrationEvent`](basket_integration_events::USER_CHECKOUT_ACCEPTED)
+//! row to the outbox, and returns the basket snapshot.  The basket
+//! delete and the outbox write commit in the same toasty transaction;
+//! the `basket-processor` worker drains the row and forwards it onto
+//! the bus.
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -16,6 +13,9 @@ use uuid::Uuid;
 
 use crate::customer::CustomerId;
 use crate::error::Error;
+use crate::event::{CheckoutAcceptedEvent, DomainEvent};
+use crate::integration_event_log::{IntegrationEventLogService, PendingEventLog};
+use crate::outbox::domain_event_to_pending;
 use crate::repository::BasketRepository;
 use crate::response::BasketResponse;
 use crate::state::AppState;
@@ -34,7 +34,24 @@ pub async fn handle(
             reason: "cannot checkout an empty basket".to_string(),
         })
     } else {
+        let request_id = Uuid::new_v4();
+        let domain_event = DomainEvent::CheckoutAccepted(CheckoutAcceptedEvent::new(
+            id,
+            request_id,
+            basket.items().to_vec(),
+        ));
         BasketRepository::delete_by_customer_id(&mut tx, id).await?;
+        // `filter_map` + `Result::transpose` drops events without an
+        // integration counterpart and propagates serialization errors;
+        // `save_events_batch` then performs the sequential insert
+        // behind a single API call (parity with the ordering and
+        // catalog handlers).
+        let transaction_id = Uuid::new_v4();
+        let pendings: Vec<PendingEventLog> = [domain_event]
+            .iter()
+            .filter_map(|event| domain_event_to_pending(event, transaction_id).transpose())
+            .collect::<Result<Vec<_>, _>>()?;
+        IntegrationEventLogService::save_events_batch(&mut tx, pendings).await?;
         tx.commit().await?;
         Ok(Json(BasketResponse::from(&basket)))
     }

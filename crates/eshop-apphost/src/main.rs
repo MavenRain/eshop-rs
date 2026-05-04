@@ -29,7 +29,7 @@ mod error;
 use std::sync::Arc;
 
 use axum::Router;
-use basket::row::{BasketItemRow, CustomerBasketRow};
+use basket::row::{BasketIntegrationEventLogRow, BasketItemRow, CustomerBasketRow};
 use catalog::row::{
     CatalogBrandRow, CatalogIntegrationEventLogRow, CatalogItemRow, CatalogKindRow,
 };
@@ -116,6 +116,7 @@ async fn build_db() -> Result<Db, Error> {
             CatalogIntegrationEventLogRow,
             CustomerBasketRow,
             BasketItemRow,
+            BasketIntegrationEventLogRow,
         ))
         .build(driver)
         .await?;

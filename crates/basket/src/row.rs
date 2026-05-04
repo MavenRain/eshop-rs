@@ -11,6 +11,7 @@
 //! round-trip and surfaces [`Error::NumericRange`](crate::Error::NumericRange)
 //! on out-of-range persisted values.
 
+use jiff::Timestamp;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -51,4 +52,28 @@ pub struct BasketItemRow {
 
     /// Optional picture url snapshot for the basket UI.
     pub picture_url: Option<String>,
+}
+
+/// Basket-side outbox row.  Distinct from
+/// `ordering-infrastructure::IntegrationEventLogRow` and
+/// `catalog::CatalogIntegrationEventLogRow` so toasty model
+/// inventory registers three separate tables; mirrors upstream
+/// eShop's per-service outbox table convention.
+#[derive(Debug, toasty::Model)]
+pub struct BasketIntegrationEventLogRow {
+    #[key]
+    pub event_id: Uuid,
+
+    pub event_type_name: String,
+
+    pub state: String,
+
+    pub times_sent: i64,
+
+    pub creation_time: Timestamp,
+
+    pub content: String,
+
+    #[index]
+    pub transaction_id: Uuid,
 }

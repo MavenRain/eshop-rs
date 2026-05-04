@@ -1,6 +1,6 @@
 [package]
-name = "basket"
-description = "Basket bounded context: domain types, persistence, and HTTP API"
+name = "basket-integration-events"
+description = "Basket bounded context: integration events published across service boundaries"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,17 +8,13 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-basket-integration-events = { path = "../basket-integration-events" }
 event-bus = { path = "../event-bus" }
 ordering-integration-events = { path = "../ordering-integration-events" }
-axum.workspace = true
-chrono.workspace = true
-jiff.workspace = true
-rust_decimal.workspace = true
 serde.workspace = true
-serde_json.workspace = true
-toasty.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

@@ -33,9 +33,12 @@ mod checkout_basket;
 pub mod customer;
 mod delete_basket;
 pub mod error;
+pub mod event;
 mod get_basket;
+pub mod integration_event_log;
 pub mod mapper;
 pub mod money;
+mod outbox;
 pub mod product;
 mod repository;
 pub mod request;
@@ -43,12 +46,17 @@ pub mod response;
 pub mod row;
 mod state;
 mod strings;
+mod time;
 mod update_basket;
 
 pub use basket::CustomerBasket;
 pub use basket_item::{BasketItem, BasketItemId};
 pub use customer::CustomerId;
 pub use error::Error;
+pub use event::{CheckoutAcceptedEvent, DomainEvent};
+pub use integration_event_log::{
+    EventLog, EventState, IntegrationEventLogService, PendingEventLog,
+};
 pub use money::{Price, Quantity};
 pub use product::ProductId;
 pub use repository::BasketRepository;

@@ -29,6 +29,8 @@ pub enum Error {
     InvalidPersistedValue { context: String, value: String },
     /// Numeric out-of-range when narrowing a persisted column.
     NumericRange { context: String },
+    /// Timestamp could not be converted between chrono and jiff.
+    TimeConversion { reason: String },
     /// Request body or path parameter failed validation.
     Validation { reason: String },
     /// The requested resource does not exist.
@@ -49,6 +51,7 @@ impl core::fmt::Display for Error {
                 write!(f, "invalid persisted value at {context}: {value}")
             }
             Self::NumericRange { context } => write!(f, "numeric range: {context}"),
+            Self::TimeConversion { reason } => write!(f, "time conversion: {reason}"),
             Self::Validation { reason } => write!(f, "validation: {reason}"),
             Self::NotFound { reason } => write!(f, "not found: {reason}"),
             Self::Json { reason } => write!(f, "json: {reason}"),
@@ -86,7 +89,8 @@ impl IntoResponse for Error {
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
             Self::Toasty { .. }
             | Self::InvalidPersistedValue { .. }
-            | Self::NumericRange { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            | Self::NumericRange { .. }
+            | Self::TimeConversion { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, self.to_string()).into_response()
     }
