@@ -29,6 +29,7 @@ mod error;
 use std::sync::Arc;
 
 use axum::Router;
+use basket::row::{BasketItemRow, CustomerBasketRow};
 use catalog::row::{
     CatalogBrandRow, CatalogIntegrationEventLogRow, CatalogItemRow, CatalogKindRow,
 };
@@ -56,6 +57,7 @@ async fn main() -> Result<(), Error> {
 
     let ordering_state = ordering_api::AppState::new(db.clone());
     let catalog_state = catalog::AppState::new(db.clone());
+    let basket_state = basket::AppState::new(db.clone());
 
     let ordering_bus =
         RabbitMqEventBus::<OrderingIntegrationEvent>::connect(config.ordering_rmq())?;
@@ -74,7 +76,7 @@ async fn main() -> Result<(), Error> {
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());
     let catalog_processor = CatalogProcessor::new(catalog_bus, db.clone(), config.poll_interval());
 
-    let app = build_router(ordering_state, catalog_state);
+    let app = build_router(ordering_state, catalog_state, basket_state);
     let bind_address = config.bind_address().to_string();
 
     let http = tokio::spawn(serve_http(app, bind_address));
@@ -112,6 +114,8 @@ async fn build_db() -> Result<Db, Error> {
             CatalogBrandRow,
             CatalogKindRow,
             CatalogIntegrationEventLogRow,
+            CustomerBasketRow,
+            BasketItemRow,
         ))
         .build(driver)
         .await?;
@@ -120,17 +124,19 @@ async fn build_db() -> Result<Db, Error> {
 
 /// Build the combined axum router that hosts every API route.
 ///
-/// Both the ordering and catalog routers are mounted at the root; the
-/// two crates pick non-overlapping prefixes (`/orders*` for ordering,
-/// `/api/catalog/*` for catalog), so a single [`Router::merge`] is
-/// enough.
+/// All three routers are mounted at the root; the crates pick
+/// non-overlapping prefixes (`/orders*` for ordering, `/api/catalog/*`
+/// for catalog, `/api/basket/*` for basket), so successive
+/// [`Router::merge`] calls are enough.
 fn build_router(
     ordering_state: ordering_api::AppState,
     catalog_state: catalog::AppState,
+    basket_state: basket::AppState,
 ) -> Router {
     Router::new()
         .merge(ordering_api::build_router(ordering_state))
         .merge(catalog::build_router(catalog_state))
+        .merge(basket::build_router(basket_state))
 }
 
 /// Bind the listener and run the axum server until the process is

@@ -12,6 +12,7 @@ name = "eshop-apphost"
 path = "src/main.rs"
 
 [dependencies]
+basket = { path = "../basket" }
 catalog = { path = "../catalog" }
 catalog-integration-events = { path = "../catalog-integration-events" }
 catalog-processor = { path = "../catalog-processor" }

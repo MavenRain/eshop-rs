@@ -12,6 +12,7 @@ members = [
     "crates/catalog-integration-events",
     "crates/catalog-processor",
     "crates/catalog-subscribers",
+    "crates/basket",
     "crates/eshop-apphost",
 ]
 
