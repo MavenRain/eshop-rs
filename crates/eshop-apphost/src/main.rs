@@ -50,6 +50,8 @@ use ordering_integration_events::OrderingIntegrationEvent;
 use ordering_processor::OrderProcessor;
 use ordering_subscribers::OrderingConsumedBasketEvent;
 use toasty::Db;
+use toasty::db::Driver;
+use toasty_driver_postgresql::PostgreSQL;
 use toasty_driver_sqlite::Sqlite;
 
 use crate::config::Config;
@@ -58,7 +60,7 @@ use crate::error::Error;
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Error> {
     let config = Config::from_env()?;
-    let db = Arc::new(build_db().await?);
+    let db = Arc::new(build_db(config.database_url()).await?);
 
     let ordering_state = ordering_api::AppState::new(db.clone());
     let catalog_state = catalog::AppState::new(db.clone());
@@ -116,12 +118,41 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-/// Build a fresh in-memory toasty [`Db`] with every row model from
-/// both bounded contexts registered.  Production deployments swap
-/// the [`Sqlite::in_memory`] driver for a postgres URL, but the
-/// model registration stays identical.
-async fn build_db() -> Result<Db, Error> {
-    let driver = Sqlite::in_memory();
+/// Build a toasty [`Db`] with every row model from each bounded
+/// context registered.  Driver selection comes from `database_url`:
+///
+/// | URL prefix                            | Driver                  |
+/// |---------------------------------------|-------------------------|
+/// | `sqlite:` (incl. `sqlite::memory:`)   | `toasty-driver-sqlite`  |
+/// | `postgresql:` / `postgres:`           | `toasty-driver-postgresql` |
+///
+/// Both branches register the identical model set; only the driver
+/// type differs.
+async fn build_db(database_url: &str) -> Result<Db, Error> {
+    let scheme = scheme_of(database_url);
+    match scheme {
+        DatabaseScheme::Sqlite => {
+            let driver = Sqlite::new(database_url).map_err(|e| Error::Toasty {
+                reason: format!("sqlite driver init: {e}"),
+            })?;
+            build_with_driver(driver).await
+        }
+        DatabaseScheme::Postgres => {
+            let driver = PostgreSQL::new(database_url).map_err(|e| Error::Toasty {
+                reason: format!("postgresql driver init: {e}"),
+            })?;
+            build_with_driver(driver).await
+        }
+        DatabaseScheme::Unsupported(prefix) => Err(Error::Config {
+            reason: format!(
+                "ESHOP_DATABASE_URL has unsupported scheme {prefix:?}; \
+                 expected `sqlite:`, `postgresql:`, or `postgres:`"
+            ),
+        }),
+    }
+}
+
+async fn build_with_driver<D: Driver>(driver: D) -> Result<Db, Error> {
     let db = Db::builder()
         .models(toasty::models!(
             OrderRow,
@@ -140,6 +171,23 @@ async fn build_db() -> Result<Db, Error> {
         .build(driver)
         .await?;
     Ok(db)
+}
+
+/// Recognized database URL schemes.
+#[derive(Debug, PartialEq, Eq)]
+enum DatabaseScheme {
+    Sqlite,
+    Postgres,
+    Unsupported(String),
+}
+
+fn scheme_of(url: &str) -> DatabaseScheme {
+    let prefix = url.split(':').next().unwrap_or_default();
+    match prefix {
+        "sqlite" => DatabaseScheme::Sqlite,
+        "postgresql" | "postgres" => DatabaseScheme::Postgres,
+        other => DatabaseScheme::Unsupported(other.to_string()),
+    }
 }
 
 /// Build the combined axum router that hosts every API route.
@@ -244,4 +292,66 @@ where
     })
     .for_each(|()| ())
     .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check(cond: bool, reason: impl FnOnce() -> String) -> Result<(), Error> {
+        if cond {
+            Ok(())
+        } else {
+            Err(Error::Config { reason: reason() })
+        }
+    }
+
+    #[test]
+    fn scheme_of_recognizes_sqlite_in_memory() -> Result<(), Error> {
+        let scheme = scheme_of("sqlite::memory:");
+        check(scheme == DatabaseScheme::Sqlite, || {
+            format!("got {scheme:?}")
+        })
+    }
+
+    #[test]
+    fn scheme_of_recognizes_sqlite_file() -> Result<(), Error> {
+        let scheme = scheme_of("sqlite:/tmp/eshop.db");
+        check(scheme == DatabaseScheme::Sqlite, || {
+            format!("got {scheme:?}")
+        })
+    }
+
+    #[test]
+    fn scheme_of_recognizes_postgresql() -> Result<(), Error> {
+        let scheme = scheme_of("postgresql://eshop:eshop@localhost/eshop");
+        check(scheme == DatabaseScheme::Postgres, || {
+            format!("got {scheme:?}")
+        })
+    }
+
+    #[test]
+    fn scheme_of_recognizes_postgres_short_form() -> Result<(), Error> {
+        let scheme = scheme_of("postgres://eshop:eshop@localhost/eshop");
+        check(scheme == DatabaseScheme::Postgres, || {
+            format!("got {scheme:?}")
+        })
+    }
+
+    #[test]
+    fn scheme_of_rejects_unknown_scheme() -> Result<(), Error> {
+        let scheme = scheme_of("mysql://localhost/eshop");
+        check(
+            matches!(&scheme, DatabaseScheme::Unsupported(s) if s == "mysql"),
+            || format!("got {scheme:?}"),
+        )
+    }
+
+    #[test]
+    fn scheme_of_rejects_url_with_no_scheme() -> Result<(), Error> {
+        let scheme = scheme_of("localhost/eshop");
+        check(matches!(scheme, DatabaseScheme::Unsupported(_)), || {
+            format!("got {scheme:?}")
+        })
+    }
 }

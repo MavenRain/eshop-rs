@@ -16,6 +16,7 @@ use crate::error::Error;
 /// Resolved `AppHost` configuration.
 pub struct Config {
     bind_address: String,
+    database_url: String,
     amqp_uri: String,
     exchange: ExchangeName,
     ordering_queue: QueueName,
@@ -34,6 +35,7 @@ impl Config {
     /// vars fall back to their documented defaults.
     pub fn from_env() -> Result<Self, Error> {
         let bind_address = read_string("ESHOP_BIND_ADDRESS", "127.0.0.1:8080");
+        let database_url = read_string("ESHOP_DATABASE_URL", "sqlite::memory:");
         let amqp_uri = read_string("ESHOP_AMQP_URI", "amqp://guest:guest@localhost:5672/");
         let exchange = ExchangeName::from(read_string("ESHOP_EXCHANGE", "eshop_event_bus"));
         let ordering_queue =
@@ -52,6 +54,7 @@ impl Config {
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
+            database_url,
             amqp_uri,
             exchange,
             ordering_queue,
@@ -67,6 +70,17 @@ impl Config {
     #[must_use]
     pub fn bind_address(&self) -> &str {
         &self.bind_address
+    }
+
+    /// Toasty database URL.  Recognized schemes:
+    /// - `sqlite::memory:` — ephemeral in-memory database (default).
+    /// - `sqlite:<path>` — file-backed `SQLite` at the given path.
+    /// - `postgresql://...` / `postgres://...` — `PostgreSQL`
+    ///   connection URL passed straight through to
+    ///   `toasty-driver-postgresql`.
+    #[must_use]
+    pub fn database_url(&self) -> &str {
+        &self.database_url
     }
 
     /// Build the [`RmqConfig`] for the Ordering bus.
