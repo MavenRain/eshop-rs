@@ -24,6 +24,7 @@ pub struct Config {
     catalog_subscriber_queue: QueueName,
     basket_queue: QueueName,
     ordering_subscriber_queue: QueueName,
+    webhooks_delivery_queue_prefix: String,
     poll_interval: Duration,
 }
 
@@ -51,6 +52,10 @@ impl Config {
             "ESHOP_ORDERING_SUBSCRIBER_QUEUE",
             "eshop-ordering-subscriber-queue",
         ));
+        let webhooks_delivery_queue_prefix = read_string(
+            "ESHOP_WEBHOOKS_DELIVERY_QUEUE_PREFIX",
+            "eshop-webhooks-delivery",
+        );
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
@@ -62,6 +67,7 @@ impl Config {
             catalog_subscriber_queue,
             basket_queue,
             ordering_subscriber_queue,
+            webhooks_delivery_queue_prefix,
             poll_interval,
         })
     }
@@ -134,6 +140,19 @@ impl Config {
             self.amqp_uri.clone(),
             self.exchange.clone(),
             self.ordering_subscriber_queue.clone(),
+        )
+    }
+
+    /// Build the [`RmqConfig`] for the webhooks delivery worker's
+    /// `<prefix>-<context>` queue, where `<context>` distinguishes the
+    /// integration-event family being consumed (one queue per type).
+    #[must_use]
+    pub fn webhooks_delivery_rmq(&self, context: &str) -> RmqConfig {
+        let queue = format!("{}-{}", self.webhooks_delivery_queue_prefix, context);
+        RmqConfig::new(
+            self.amqp_uri.clone(),
+            self.exchange.clone(),
+            QueueName::from(queue),
         )
     }
 

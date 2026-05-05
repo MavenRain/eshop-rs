@@ -54,6 +54,7 @@ use toasty::db::Driver;
 use toasty_driver_postgresql::PostgreSQL;
 use toasty_driver_sqlite::Sqlite;
 use webhooks::row::WebhookSubscriptionRow;
+use webhooks_delivery::make_handler as make_delivery_handler;
 
 use crate::config::Config;
 use crate::error::Error;
@@ -93,6 +94,38 @@ async fn main() -> Result<(), Error> {
         RabbitMqEventBus::<OrderingConsumedBasketEvent>::connect(config.ordering_subscriber_rmq())?;
     ordering_subscriber_bus
         .subscribe(ordering_subscribers::make_handler(db.clone()))
+        .run()?;
+
+    // Webhooks delivery: one bus per integration-event family,
+    // bound to its own queue under the `webhooks-delivery` prefix.
+    // All three closures share the same shared HTTP client.
+    let http_client = Arc::new(reqwest::Client::new());
+    let webhooks_delivery_ordering_bus = RabbitMqEventBus::<OrderingIntegrationEvent>::connect(
+        config.webhooks_delivery_rmq("ordering"),
+    )?;
+    webhooks_delivery_ordering_bus
+        .subscribe(make_delivery_handler::<OrderingIntegrationEvent>(
+            db.clone(),
+            http_client.clone(),
+        ))
+        .run()?;
+    let webhooks_delivery_catalog_bus = RabbitMqEventBus::<CatalogIntegrationEvent>::connect(
+        config.webhooks_delivery_rmq("catalog"),
+    )?;
+    webhooks_delivery_catalog_bus
+        .subscribe(make_delivery_handler::<CatalogIntegrationEvent>(
+            db.clone(),
+            http_client.clone(),
+        ))
+        .run()?;
+    let webhooks_delivery_basket_bus = RabbitMqEventBus::<BasketIntegrationEvent>::connect(
+        config.webhooks_delivery_rmq("basket"),
+    )?;
+    webhooks_delivery_basket_bus
+        .subscribe(make_delivery_handler::<BasketIntegrationEvent>(
+            db.clone(),
+            http_client.clone(),
+        ))
         .run()?;
 
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());

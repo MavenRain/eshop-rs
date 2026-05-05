@@ -27,6 +27,8 @@ ordering-integration-events = { path = "../ordering-integration-events" }
 ordering-processor = { path = "../ordering-processor" }
 ordering-subscribers = { path = "../ordering-subscribers" }
 webhooks = { path = "../webhooks" }
+webhooks-delivery = { path = "../webhooks-delivery" }
+reqwest.workspace = true
 axum.workspace = true
 futures-lite.workspace = true
 toasty.workspace = true

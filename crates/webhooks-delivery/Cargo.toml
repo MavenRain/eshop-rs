@@ -1,0 +1,20 @@
+[package]
+name = "webhooks-delivery"
+description = "Webhooks delivery worker: subscribe to integration events and POST to matching subscribers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+event-bus = { path = "../event-bus" }
+webhooks = { path = "../webhooks" }
+comp-cat-rs.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+toasty.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true
