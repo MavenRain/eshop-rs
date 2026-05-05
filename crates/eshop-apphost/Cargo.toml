@@ -26,6 +26,7 @@ ordering-infrastructure = { path = "../ordering-infrastructure" }
 ordering-integration-events = { path = "../ordering-integration-events" }
 ordering-processor = { path = "../ordering-processor" }
 ordering-subscribers = { path = "../ordering-subscribers" }
+webhooks = { path = "../webhooks" }
 axum.workspace = true
 futures-lite.workspace = true
 toasty.workspace = true

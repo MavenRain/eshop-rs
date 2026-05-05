@@ -53,6 +53,7 @@ use toasty::Db;
 use toasty::db::Driver;
 use toasty_driver_postgresql::PostgreSQL;
 use toasty_driver_sqlite::Sqlite;
+use webhooks::row::WebhookSubscriptionRow;
 
 use crate::config::Config;
 use crate::error::Error;
@@ -65,6 +66,7 @@ async fn main() -> Result<(), Error> {
     let ordering_state = ordering_api::AppState::new(db.clone());
     let catalog_state = catalog::AppState::new(db.clone());
     let basket_state = basket::AppState::new(db.clone());
+    let webhooks_state = webhooks::AppState::new(db.clone());
 
     let ordering_bus =
         RabbitMqEventBus::<OrderingIntegrationEvent>::connect(config.ordering_rmq())?;
@@ -97,7 +99,7 @@ async fn main() -> Result<(), Error> {
     let catalog_processor = CatalogProcessor::new(catalog_bus, db.clone(), config.poll_interval());
     let basket_processor = BasketProcessor::new(basket_bus, db.clone(), config.poll_interval());
 
-    let app = build_router(ordering_state, catalog_state, basket_state);
+    let app = build_router(ordering_state, catalog_state, basket_state, webhooks_state);
     let bind_address = config.bind_address().to_string();
 
     let http = tokio::spawn(serve_http(app, bind_address));
@@ -171,6 +173,7 @@ async fn build_with_driver<D: Driver>(driver: D) -> Result<Db, Error> {
             CustomerBasketRow,
             BasketItemRow,
             BasketIntegrationEventLogRow,
+            WebhookSubscriptionRow,
         ))
         .build(driver)
         .await?;
@@ -196,19 +199,21 @@ fn scheme_of(url: &str) -> DatabaseScheme {
 
 /// Build the combined axum router that hosts every API route.
 ///
-/// All three routers are mounted at the root; the crates pick
+/// All four routers are mounted at the root; the crates pick
 /// non-overlapping prefixes (`/orders*` for ordering, `/api/catalog/*`
-/// for catalog, `/api/basket/*` for basket), so successive
-/// [`Router::merge`] calls are enough.
+/// for catalog, `/api/basket/*` for basket, `/api/webhooks*` for
+/// webhooks), so successive [`Router::merge`] calls are enough.
 fn build_router(
     ordering_state: ordering_api::AppState,
     catalog_state: catalog::AppState,
     basket_state: basket::AppState,
+    webhooks_state: webhooks::AppState,
 ) -> Router {
     Router::new()
         .merge(ordering_api::build_router(ordering_state))
         .merge(catalog::build_router(catalog_state))
         .merge(basket::build_router(basket_state))
+        .merge(webhooks::build_router(webhooks_state))
 }
 
 /// Bind the listener and run the axum server until the process is

@@ -16,6 +16,7 @@ members = [
     "crates/basket",
     "crates/basket-integration-events",
     "crates/basket-processor",
+    "crates/webhooks",
     "crates/eshop-apphost",
 ]
 
