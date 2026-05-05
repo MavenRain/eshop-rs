@@ -3,16 +3,21 @@
 //! variant.
 //!
 //! Mirrors upstream eShop's `ProductPriceChangedIntegrationEvent` :
-//! `(ProductId, NewPrice, OldPrice)`.
+//! `(ProductId, NewPrice, OldPrice)`.  `product_id` is `i32`,
+//! aligning with [`catalog::CatalogItemId`](https://docs.rs/catalog),
+//! [`ordering_domain::ProductId`](https://docs.rs/ordering-domain),
+//! [`basket::ProductId`](https://docs.rs/basket), and the
+//! [`OrderStockItem.product_id`](ordering_integration_events::OrderStockItem)
+//! field, so a downstream consumer that joins price changes against
+//! a stock-decrement flow speaks one identifier shape end to end.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Payload of [`CatalogIntegrationEvent::ProductPriceChanged`](crate::CatalogIntegrationEvent::ProductPriceChanged).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProductPriceChangedIntegrationEventPayload {
-    product_id: Uuid,
+    product_id: i32,
     new_price: Decimal,
     old_price: Decimal,
 }
@@ -20,7 +25,7 @@ pub struct ProductPriceChangedIntegrationEventPayload {
 impl ProductPriceChangedIntegrationEventPayload {
     /// Construct.
     #[must_use]
-    pub fn new(product_id: Uuid, new_price: Decimal, old_price: Decimal) -> Self {
+    pub fn new(product_id: i32, new_price: Decimal, old_price: Decimal) -> Self {
         Self {
             product_id,
             new_price,
@@ -30,7 +35,7 @@ impl ProductPriceChangedIntegrationEventPayload {
 
     /// Product identifier.
     #[must_use]
-    pub fn product_id(&self) -> Uuid {
+    pub fn product_id(&self) -> i32 {
         self.product_id
     }
 

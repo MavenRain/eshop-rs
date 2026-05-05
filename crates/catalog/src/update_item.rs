@@ -19,7 +19,7 @@ use crate::state::AppState;
 
 pub async fn handle(
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i32>,
     Json(request): Json<UpdateItemRequest>,
 ) -> Result<StatusCode, Error> {
     let item_id = CatalogItemId::from(id);

@@ -17,9 +17,13 @@ use uuid::Uuid;
 
 #[derive(Debug, toasty::Model)]
 pub struct CatalogItemRow {
+    /// Catalog product id.  Width: `i32`, matching upstream eShop and
+    /// the `OrderStockItem`/`ProductId` shape used by ordering and
+    /// basket integration events.  Caller-supplied (the request body
+    /// carries the value); auto-incrementing IDs at the database
+    /// layer are a future toasty enhancement.
     #[key]
-    #[auto]
-    pub id: Uuid,
+    pub id: i32,
 
     pub name: String,
 

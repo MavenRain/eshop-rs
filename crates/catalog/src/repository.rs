@@ -62,7 +62,7 @@ impl CatalogItemRepository {
     where
         E: toasty::Executor,
     {
-        let row = CatalogItemRow::get_by_id(executor, &id.into_uuid()).await?;
+        let row = CatalogItemRow::get_by_id(executor, &id.into_i32()).await?;
         row_to_item(&row)
     }
 
@@ -102,7 +102,7 @@ impl CatalogItemRepository {
     where
         E: toasty::Executor,
     {
-        let row = CatalogItemRow::get_by_id(executor, &id.into_uuid()).await?;
+        let row = CatalogItemRow::get_by_id(executor, &id.into_i32()).await?;
         row.delete().exec(executor).await?;
         Ok(())
     }

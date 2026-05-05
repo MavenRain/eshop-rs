@@ -22,11 +22,10 @@
 //!     CatalogIntegrationEvent, ProductPriceChangedIntegrationEventPayload,
 //! };
 //! use rust_decimal::Decimal;
-//! use uuid::Uuid;
 //!
 //! let event = CatalogIntegrationEvent::ProductPriceChanged(
 //!     ProductPriceChangedIntegrationEventPayload::new(
-//!         Uuid::nil(),
+//!         42,
 //!         Decimal::from(20),
 //!         Decimal::from(25),
 //!     ),

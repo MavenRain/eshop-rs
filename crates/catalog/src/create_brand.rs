@@ -13,7 +13,7 @@ use crate::state::AppState;
 pub async fn handle(
     State(state): State<AppState>,
     Json(request): Json<CreateBrandRequest>,
-) -> Result<(StatusCode, Json<CreatedResponse>), Error> {
+) -> Result<(StatusCode, Json<CreatedResponse<uuid::Uuid>>), Error> {
     let brand = request.try_into_brand()?;
     let brand_id = brand.id();
 

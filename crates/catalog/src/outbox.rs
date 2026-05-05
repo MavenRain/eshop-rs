@@ -71,7 +71,7 @@ pub fn from_domain_event(event: &DomainEvent) -> Option<CatalogIntegrationEvent>
         DomainEvent::ProductPriceChanged(payload) => {
             Some(CatalogIntegrationEvent::ProductPriceChanged(
                 ProductPriceChangedIntegrationEventPayload::new(
-                    payload.product_id().into_uuid(),
+                    payload.product_id().into_i32(),
                     payload.new_price().into_decimal(),
                     payload.old_price().into_decimal(),
                 ),
@@ -101,7 +101,7 @@ mod tests {
     fn sample_domain_event() -> Result<DomainEvent, Error> {
         Ok(DomainEvent::ProductPriceChanged(
             ProductPriceChangedEvent::new(
-                CatalogItemId::new(),
+                CatalogItemId::from(42),
                 Price::new(Decimal::from(20))?,
                 Price::new(Decimal::from(25))?,
             ),

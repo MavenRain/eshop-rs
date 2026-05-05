@@ -12,8 +12,6 @@
 //! for v1 of the Rust port (see crate-level docs).  Pgvector / AI
 //! semantic search will land in a follow-up dedicated commit.
 
-use uuid::Uuid;
-
 use crate::brand::CatalogBrandId;
 use crate::error::Error;
 use crate::event::{DomainEvent, ProductPriceChangedEvent};
@@ -23,38 +21,45 @@ use crate::stock::{MaxStockThreshold, RestockThreshold, Stock, Units};
 use crate::strings::{ItemDescription, ItemName, PictureFileName};
 
 /// Identifier for a [`CatalogItem`].
+///
+/// Width: `i32`, matching upstream eShop's `Catalog.API` `Id`
+/// column and the integer `ProductId` carried in
+/// [`ordering_domain::ProductId`](https://docs.rs/ordering-domain) and
+/// `OrderStockItem`.  This is the alignment that lets stock-related
+/// integration events resolve catalog products at the receiving
+/// service without translation: the basket→ordering hand-off and
+/// ordering→catalog stock-decrement flow speak the same primitive.
+///
+/// Caller-supplied: there is no `::new()` mint because `i32` has no
+/// random generator.  Construct with [`From<i32>`].  Auto-incrementing
+/// IDs at the database layer is a future toasty enhancement; until
+/// then the request body or upstream caller picks the value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub struct CatalogItemId(Uuid);
+pub struct CatalogItemId(i32);
 
 impl CatalogItemId {
-    /// Generate a fresh identifier.
+    /// Borrow as the underlying `i32`.
     #[must_use]
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-
-    /// Underlying [`Uuid`].
-    #[must_use]
-    pub fn into_uuid(self) -> Uuid {
+    pub fn into_i32(self) -> i32 {
         self.0
     }
 }
 
-impl Default for CatalogItemId {
-    fn default() -> Self {
-        Self::new()
+impl From<i32> for CatalogItemId {
+    fn from(n: i32) -> Self {
+        Self(n)
     }
 }
 
-impl From<Uuid> for CatalogItemId {
-    fn from(u: Uuid) -> Self {
-        Self(u)
-    }
-}
-
-impl From<CatalogItemId> for Uuid {
+impl From<CatalogItemId> for i32 {
     fn from(id: CatalogItemId) -> Self {
         id.0
+    }
+}
+
+impl core::fmt::Display for CatalogItemId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -420,7 +425,7 @@ mod tests {
 
     fn sample_item(stock: u32, max: u32) -> Result<CatalogItem, Error> {
         CatalogItem::new(
-            CatalogItemId::new(),
+            CatalogItemId::from(1),
             ItemName::try_from(".NET Bot Black Hoodie")?,
             None,
             Price::new(Decimal::from(20))?,
@@ -451,7 +456,7 @@ mod tests {
     #[test]
     fn new_rejects_restock_exceeding_max() -> Result<(), Error> {
         let outcome = CatalogItem::new(
-            CatalogItemId::new(),
+            CatalogItemId::from(1),
             ItemName::try_from(".NET Bot Black Hoodie")?,
             None,
             Price::new(Decimal::from(20))?,

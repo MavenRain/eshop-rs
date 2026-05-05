@@ -16,7 +16,7 @@ use crate::kind::CatalogKind;
 /// `GET /api/catalog/items` response bodies.
 #[derive(Debug, Clone, Serialize)]
 pub struct CatalogItemResponse {
-    id: Uuid,
+    id: i32,
     name: String,
     description: Option<String>,
     price: Decimal,
@@ -32,7 +32,7 @@ pub struct CatalogItemResponse {
 impl From<&CatalogItem> for CatalogItemResponse {
     fn from(item: &CatalogItem) -> Self {
         Self {
-            id: item.id().into_uuid(),
+            id: item.id().into_i32(),
             name: item.name().as_str().to_string(),
             description: item.description().map(|d| d.as_str().to_string()),
             price: item.price().into_decimal(),
@@ -108,15 +108,18 @@ where
 }
 
 /// `POST /api/catalog/items` / `/brands` / `/kinds` response body.
+///
+/// Generic over the id width: items are `CreatedResponse<i32>`,
+/// brands and kinds are `CreatedResponse<Uuid>`.
 #[derive(Debug, Clone, Serialize)]
-pub struct CreatedResponse {
-    id: Uuid,
+pub struct CreatedResponse<T: Serialize> {
+    id: T,
 }
 
-impl CreatedResponse {
+impl<T: Serialize> CreatedResponse<T> {
     /// Wrap a fresh aggregate id for the JSON response.
     #[must_use]
-    pub fn new(id: Uuid) -> Self {
+    pub fn new(id: T) -> Self {
         Self { id }
     }
 }
@@ -144,7 +147,7 @@ mod tests {
 
     fn sample_item() -> Result<CatalogItem, Error> {
         CatalogItem::new(
-            CatalogItemId::new(),
+            CatalogItemId::from(1),
             ItemName::try_from(".NET Bot Black Hoodie")?,
             Some(ItemDescription::try_from("Stylish hoodie")?),
             Price::new(Decimal::from(20))?,
@@ -161,7 +164,7 @@ mod tests {
     fn item_response_projects_all_fields() -> Result<(), Error> {
         let item = sample_item()?;
         let response = CatalogItemResponse::from(&item);
-        check(response.id == item.id().into_uuid(), || {
+        check(response.id == item.id().into_i32(), || {
             "id mismatch".to_string()
         })?;
         check(response.name == ".NET Bot Black Hoodie", || {

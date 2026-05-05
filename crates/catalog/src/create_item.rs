@@ -13,7 +13,7 @@ use crate::state::AppState;
 pub async fn handle(
     State(state): State<AppState>,
     Json(request): Json<CreateItemRequest>,
-) -> Result<(StatusCode, Json<CreatedResponse>), Error> {
+) -> Result<(StatusCode, Json<CreatedResponse<i32>>), Error> {
     let item = request.try_into_item()?;
     let item_id = item.id();
 
@@ -27,6 +27,6 @@ pub async fn handle(
 
     Ok((
         StatusCode::CREATED,
-        Json(CreatedResponse::new(item_id.into_uuid())),
+        Json(CreatedResponse::new(item_id.into_i32())),
     ))
 }

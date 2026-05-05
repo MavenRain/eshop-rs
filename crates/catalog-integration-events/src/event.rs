@@ -46,7 +46,6 @@ mod tests {
     use super::*;
 
     use rust_decimal::Decimal;
-    use uuid::Uuid;
 
     #[derive(Debug)]
     enum TestError {
@@ -81,7 +80,7 @@ mod tests {
     fn sample() -> CatalogIntegrationEvent {
         CatalogIntegrationEvent::ProductPriceChanged(
             ProductPriceChangedIntegrationEventPayload::new(
-                Uuid::nil(),
+                42,
                 Decimal::from(20),
                 Decimal::from(25),
             ),

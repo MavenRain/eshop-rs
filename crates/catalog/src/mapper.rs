@@ -33,7 +33,7 @@ use crate::strings::{BrandName, ItemDescription, ItemName, KindName, PictureFile
 #[must_use]
 pub fn item_to_row(item: &CatalogItem) -> NewCatalogItemRow {
     NewCatalogItemRow {
-        id: item.id().into_uuid(),
+        id: item.id().into_i32(),
         name: item.name().as_str().to_string(),
         description: item.description().map(|d| d.as_str().to_string()),
         price: item.price().into_decimal(),
@@ -134,7 +134,7 @@ pub fn row_to_kind(row: &CatalogKindRow) -> Result<CatalogKind, Error> {
 /// Bag-of-columns representation of [`CatalogItem`] for insert/update.
 #[derive(Debug, Clone)]
 pub struct NewCatalogItemRow {
-    pub id: Uuid,
+    pub id: i32,
     pub name: String,
     pub description: Option<String>,
     pub price: Decimal,
@@ -173,7 +173,7 @@ mod tests {
 
     fn sample_item() -> Result<CatalogItem, Error> {
         CatalogItem::new(
-            CatalogItemId::new(),
+            CatalogItemId::from(1),
             ItemName::try_from(".NET Bot Black Hoodie")?,
             Some(ItemDescription::try_from("Stylish hoodie")?),
             Price::new(Decimal::from(20))?,
@@ -190,9 +190,7 @@ mod tests {
     fn item_to_row_projects_optional_columns() -> Result<(), Error> {
         let item = sample_item()?;
         let row = item_to_row(&item);
-        check(row.id == item.id().into_uuid(), || {
-            "id mismatch".to_string()
-        })?;
+        check(row.id == item.id().into_i32(), || "id mismatch".to_string())?;
         check(row.name == ".NET Bot Black Hoodie", || {
             format!("name {}", row.name)
         })?;
@@ -265,7 +263,7 @@ mod tests {
     #[test]
     fn row_to_item_rejects_negative_stock() -> Result<(), Error> {
         let row = CatalogItemRow {
-            id: Uuid::new_v4(),
+            id: 1,
             name: "x".to_string(),
             description: None,
             price: Decimal::from(1),
@@ -286,7 +284,7 @@ mod tests {
     #[test]
     fn row_to_item_rejects_empty_name() -> Result<(), Error> {
         let row = CatalogItemRow {
-            id: Uuid::new_v4(),
+            id: 1,
             name: String::new(),
             description: None,
             price: Decimal::from(1),

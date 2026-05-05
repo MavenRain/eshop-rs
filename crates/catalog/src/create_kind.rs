@@ -13,7 +13,7 @@ use crate::state::AppState;
 pub async fn handle(
     State(state): State<AppState>,
     Json(request): Json<CreateKindRequest>,
-) -> Result<(StatusCode, Json<CreatedResponse>), Error> {
+) -> Result<(StatusCode, Json<CreatedResponse<uuid::Uuid>>), Error> {
     let kind = request.try_into_kind()?;
     let kind_id = kind.id();
 

@@ -186,7 +186,7 @@ mod tests {
         }
     }
 
-    fn price_change_log(product_id: Uuid) -> Result<EventLog, Error> {
+    fn price_change_log(product_id: i32) -> Result<EventLog, Error> {
         let event = CatalogIntegrationEvent::ProductPriceChanged(
             ProductPriceChangedIntegrationEventPayload::new(
                 product_id,
@@ -206,7 +206,7 @@ mod tests {
         ))
     }
 
-    fn product_id_of(event: &CatalogIntegrationEvent) -> Uuid {
+    fn product_id_of(event: &CatalogIntegrationEvent) -> i32 {
         match event {
             CatalogIntegrationEvent::ProductPriceChanged(p) => p.product_id(),
         }
@@ -216,7 +216,7 @@ mod tests {
     async fn publish_log_forwards_event_to_bus() -> Result<(), Error> {
         let (bus, rx): (InMemoryEventBus<CatalogIntegrationEvent>, Receiver<_>) =
             InMemoryEventBus::new();
-        let product_id = Uuid::new_v4();
+        let product_id = 42_i32;
         let log = price_change_log(product_id)?;
         publish_log(&bus, &log).await?;
         let received = rx.try_recv().map_err(|e| Error::Worker {

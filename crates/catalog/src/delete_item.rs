@@ -2,7 +2,6 @@
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use uuid::Uuid;
 
 use crate::error::Error;
 use crate::item::CatalogItemId;
@@ -11,7 +10,7 @@ use crate::state::AppState;
 
 pub async fn handle(
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<i32>,
 ) -> Result<StatusCode, Error> {
     // FFI-mut exception: see `create_item::handle`.
     let mut conn = state.db().connection().await?;

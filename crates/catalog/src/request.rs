@@ -18,8 +18,15 @@ use crate::stock::{MaxStockThreshold, RestockThreshold, Stock};
 use crate::strings::{BrandName, ItemDescription, ItemName, KindName, PictureFileName};
 
 /// `POST /api/catalog/items` body.
+///
+/// `id` is caller-supplied and aligned with upstream eShop's
+/// `Catalog.API.CatalogItem.Id` width (`int`).  The basket and
+/// ordering integration events carry the same primitive, so the
+/// caller (or an upstream sequence service) picks an id that those
+/// other contexts can resolve.
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateItemRequest {
+    id: i32,
     name: String,
     description: Option<String>,
     price: Decimal,
@@ -32,8 +39,7 @@ pub struct CreateItemRequest {
 }
 
 impl CreateItemRequest {
-    /// Project this request into a fresh [`CatalogItem`] aggregate
-    /// with a freshly-generated id.
+    /// Project this request into a [`CatalogItem`] aggregate.
     ///
     /// # Errors
     /// Returns [`Error::EmptyString`] for blank strings,
@@ -50,7 +56,7 @@ impl CreateItemRequest {
             .map(PictureFileName::try_from)
             .transpose()?;
         CatalogItem::new(
-            CatalogItemId::new(),
+            CatalogItemId::from(self.id),
             ItemName::try_from(self.name)?,
             description,
             Price::new(self.price)?,
@@ -188,6 +194,7 @@ mod tests {
 
     fn valid_create_item() -> CreateItemRequest {
         CreateItemRequest {
+            id: 1,
             name: ".NET Bot Black Hoodie".to_string(),
             description: Some("Stylish hoodie".to_string()),
             price: Decimal::new(1999, 2),
