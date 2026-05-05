@@ -40,8 +40,10 @@ impl IntegrationEvent for BasketIntegrationEvent {
 mod tests {
     use super::*;
 
-    use ordering_integration_events::OrderStockItem;
+    use rust_decimal::Decimal;
     use uuid::Uuid;
+
+    use crate::payload::BasketSnapshotItem;
 
     #[derive(Debug)]
     enum TestError {
@@ -79,7 +81,13 @@ mod tests {
             UserCheckoutAcceptedIntegrationEventPayload::new(
                 Uuid::nil(),
                 Uuid::max(),
-                vec![OrderStockItem::new(42, 3)],
+                vec![BasketSnapshotItem::new(
+                    42,
+                    "Hoodie".to_string(),
+                    Decimal::from(20),
+                    Some("hoodie.png".to_string()),
+                    3,
+                )],
             ),
         )
     }

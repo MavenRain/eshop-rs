@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 event-bus = { path = "../event-bus" }
-ordering-integration-events = { path = "../ordering-integration-events" }
+rust_decimal.workspace = true
 serde.workspace = true
 uuid.workspace = true
 

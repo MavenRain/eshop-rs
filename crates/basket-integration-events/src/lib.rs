@@ -40,4 +40,4 @@ mod event;
 mod payload;
 
 pub use event::{BasketIntegrationEvent, USER_CHECKOUT_ACCEPTED};
-pub use payload::UserCheckoutAcceptedIntegrationEventPayload;
+pub use payload::{BasketSnapshotItem, UserCheckoutAcceptedIntegrationEventPayload};

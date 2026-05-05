@@ -160,11 +160,12 @@ mod tests {
 
     use basket::EventState;
     use basket_integration_events::{
-        BasketIntegrationEvent, USER_CHECKOUT_ACCEPTED, UserCheckoutAcceptedIntegrationEventPayload,
+        BasketIntegrationEvent, BasketSnapshotItem, USER_CHECKOUT_ACCEPTED,
+        UserCheckoutAcceptedIntegrationEventPayload,
     };
     use chrono::Utc;
     use event_bus::{InMemoryEventBus, IntegrationEvent};
-    use ordering_integration_events::OrderStockItem;
+    use rust_decimal::Decimal;
     use std::sync::mpsc::Receiver;
     use uuid::Uuid;
 
@@ -181,7 +182,13 @@ mod tests {
             UserCheckoutAcceptedIntegrationEventPayload::new(
                 customer_id,
                 Uuid::new_v4(),
-                vec![OrderStockItem::new(42, 3)],
+                vec![BasketSnapshotItem::new(
+                    42,
+                    "Hoodie".to_string(),
+                    Decimal::from(20),
+                    None,
+                    3,
+                )],
             ),
         );
         let content = serde_json::to_string(&event)?;

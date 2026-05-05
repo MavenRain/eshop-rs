@@ -84,11 +84,13 @@ async fn main() -> Result<(), Error> {
         .run()?;
 
     // Ordering-side subscriber to basket events.  Same lifecycle
-    // contract as `catalog_subscriber_bus`.
+    // contract as `catalog_subscriber_bus`; the handler captures
+    // `db` via `make_handler` so it can mint and persist orders
+    // from inside the bus's runtime.
     let ordering_subscriber_bus =
         RabbitMqEventBus::<OrderingConsumedBasketEvent>::connect(config.ordering_subscriber_rmq())?;
     ordering_subscriber_bus
-        .subscribe(ordering_subscribers::handle)
+        .subscribe(ordering_subscribers::make_handler(db.clone()))
         .run()?;
 
     let ordering_processor = OrderProcessor::new(ordering_bus, db.clone(), config.poll_interval());

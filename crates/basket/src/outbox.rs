@@ -10,10 +10,9 @@
 //! depends on `basket-integration-events`, not vice versa.
 
 use basket_integration_events::{
-    BasketIntegrationEvent, UserCheckoutAcceptedIntegrationEventPayload,
+    BasketIntegrationEvent, BasketSnapshotItem, UserCheckoutAcceptedIntegrationEventPayload,
 };
 use event_bus::IntegrationEvent;
-use ordering_integration_events::OrderStockItem;
 use uuid::Uuid;
 
 use crate::basket_item::BasketItem;
@@ -66,21 +65,27 @@ pub fn domain_event_to_pending(
 pub fn from_domain_event(event: &DomainEvent) -> Option<BasketIntegrationEvent> {
     match event {
         DomainEvent::CheckoutAccepted(payload) => {
-            let stock_items: Vec<OrderStockItem> =
-                payload.items().iter().map(stock_item_from).collect();
+            let basket_items: Vec<BasketSnapshotItem> =
+                payload.items().iter().map(snapshot_item_from).collect();
             Some(BasketIntegrationEvent::UserCheckoutAccepted(
                 UserCheckoutAcceptedIntegrationEventPayload::new(
                     payload.customer_id().into_uuid(),
                     payload.request_id(),
-                    stock_items,
+                    basket_items,
                 ),
             ))
         }
     }
 }
 
-fn stock_item_from(item: &BasketItem) -> OrderStockItem {
-    OrderStockItem::new(item.product_id().into(), item.quantity().get())
+fn snapshot_item_from(item: &BasketItem) -> BasketSnapshotItem {
+    BasketSnapshotItem::new(
+        item.product_id().into(),
+        item.product_name().as_str().to_string(),
+        item.unit_price().into_decimal(),
+        item.picture_url().map(|p| p.as_str().to_string()),
+        item.quantity().get(),
+    )
 }
 
 #[cfg(test)]
@@ -150,17 +155,17 @@ mod tests {
         })?;
         let parsed: BasketIntegrationEvent = serde_json::from_str(pending.content())?;
         let BasketIntegrationEvent::UserCheckoutAccepted(payload) = &parsed;
-        check(payload.order_stock_items().len() == 1, || {
-            format!("items {}", payload.order_stock_items().len())
+        check(payload.basket_items().len() == 1, || {
+            format!("items {}", payload.basket_items().len())
         })?;
-        let item = payload
-            .order_stock_items()
-            .first()
-            .ok_or(Error::Validation {
-                reason: "empty items".to_string(),
-            })?;
+        let item = payload.basket_items().first().ok_or(Error::Validation {
+            reason: "empty items".to_string(),
+        })?;
         check(item.product_id() == 42, || {
             format!("product_id {}", item.product_id())
+        })?;
+        check(item.product_name() == ".NET Bot Hoodie", || {
+            format!("name {}", item.product_name())
         })?;
         check(item.units() == 3, || format!("units {}", item.units()))
     }
