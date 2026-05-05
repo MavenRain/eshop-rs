@@ -74,11 +74,13 @@ async fn main() -> Result<(), Error> {
     // Catalog-side subscriber to ordering events.  Bound at startup
     // and held for the lifetime of `main`: the bus owns the runtime
     // that drives the consume loop, so dropping it would cancel the
-    // subscription.
+    // subscription.  The handler closure captures `db` via
+    // `make_handler` so it can resolve and decrement catalog items
+    // from inside the bus's runtime.
     let catalog_subscriber_bus =
         RabbitMqEventBus::<CatalogConsumedOrderingEvent>::connect(config.catalog_subscriber_rmq())?;
     catalog_subscriber_bus
-        .subscribe(catalog_subscribers::handle)
+        .subscribe(catalog_subscribers::make_handler(db.clone()))
         .run()?;
 
     // Ordering-side subscriber to basket events.  Same lifecycle

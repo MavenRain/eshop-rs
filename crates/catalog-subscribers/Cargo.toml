@@ -8,10 +8,13 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+catalog = { path = "../catalog" }
 event-bus = { path = "../event-bus" }
 ordering-integration-events = { path = "../ordering-integration-events" }
 comp-cat-rs.workspace = true
 serde.workspace = true
+toasty.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
