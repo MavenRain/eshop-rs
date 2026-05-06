@@ -18,6 +18,7 @@ import Page.Basket as Basket
 import Page.Catalog as Catalog
 import Page.Home as Home
 import Page.Login as Login
+import Page.Webhooks as Webhooks
 import Route exposing (Route)
 import Url exposing (Url)
 
@@ -44,6 +45,7 @@ type PageModel
     | LoginModel Login.Model
     | CatalogModel Catalog.Model
     | BasketModel Basket.Model
+    | WebhooksModel Webhooks.Model
 
 
 type Msg
@@ -53,6 +55,7 @@ type Msg
     | LoginMsg Login.Msg
     | CatalogMsg Catalog.Msg
     | BasketMsg Basket.Msg
+    | WebhooksMsg Webhooks.Msg
 
 
 main : Program D.Value Model Msg
@@ -106,6 +109,9 @@ initPage baseUrl session route =
 
         Route.Basket ->
             Basket.init baseUrl session |> mapPage BasketModel BasketMsg
+
+        Route.Webhooks ->
+            Webhooks.init baseUrl session |> mapPage WebhooksModel WebhooksMsg
 
 
 mapPage : (subModel -> PageModel) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( PageModel, Cmd Msg )
@@ -164,6 +170,11 @@ update msg model =
                 |> mapPage BasketModel BasketMsg
                 |> attachToModel model
 
+        ( WebhooksMsg subMsg, WebhooksModel subModel ) ->
+            Webhooks.update subMsg subModel
+                |> mapPage WebhooksModel WebhooksMsg
+                |> attachToModel model
+
         -- Page message arrived for a different page (URL changed
         -- before the message was processed).  Drop it.
         ( HomeMsg _, _ ) ->
@@ -176,6 +187,9 @@ update msg model =
             ( model, Cmd.none )
 
         ( BasketMsg _, _ ) ->
+            ( model, Cmd.none )
+
+        ( WebhooksMsg _, _ ) ->
             ( model, Cmd.none )
 
 
@@ -203,6 +217,7 @@ viewNav =
         [ a [ Route.href Route.Home ] [ text "Home" ]
         , a [ Route.href Route.Catalog ] [ text "Catalog" ]
         , a [ Route.href Route.Basket ] [ text "Basket" ]
+        , a [ Route.href Route.Webhooks ] [ text "Webhooks" ]
         , a [ Route.href Route.Login ] [ text "Sign in" ]
         ]
 
@@ -221,3 +236,6 @@ viewPage page =
 
         BasketModel subModel ->
             Basket.view subModel |> Html.map BasketMsg
+
+        WebhooksModel subModel ->
+            Webhooks.view subModel |> Html.map WebhooksMsg

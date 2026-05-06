@@ -3,6 +3,7 @@ module Api exposing
     , Session
     , baseUrlFromString
     , baseUrlToString
+    , delete
     , get
     , post
     , put
@@ -144,6 +145,27 @@ put base session path body decoder toMsg =
         , url = baseUrlToString base ++ path
         , body = Http.jsonBody body
         , expect = Http.expectJson toMsg decoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+{-| DELETE `<base>/<path>`.  Used for endpoints returning 204 No
+Content; the result type carries no body.
+-}
+delete :
+    BaseUrl
+    -> Session
+    -> String
+    -> (Result Http.Error () -> msg)
+    -> Cmd msg
+delete base session path toMsg =
+    Http.request
+        { method = "DELETE"
+        , headers = authHeaders session
+        , url = baseUrlToString base ++ path
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever toMsg
         , timeout = Nothing
         , tracker = Nothing
         }
