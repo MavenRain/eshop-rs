@@ -10,11 +10,12 @@ the pre-deletion snapshot — we render that snapshot under a
 -}
 
 import Api exposing (BaseUrl, Session)
-import Html exposing (Html, button, div, h2, li, p, text, ul)
+import Html exposing (Html, a, button, div, h2, li, p, text, ul)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Route
 
 
 type alias Model =
@@ -242,6 +243,7 @@ viewCheckedOut basket =
     div []
         [ p [] [ text "Order placed.  Thanks!" ]
         , ul [] (List.map viewSnapshotItem basket.items)
+        , p [] [ a [ Route.href Route.Orders ] [ text "View your orders" ] ]
         ]
 
 

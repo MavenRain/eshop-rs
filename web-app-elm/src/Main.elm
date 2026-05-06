@@ -18,6 +18,7 @@ import Page.Basket as Basket
 import Page.Catalog as Catalog
 import Page.Home as Home
 import Page.Login as Login
+import Page.Orders as Orders
 import Page.Webhooks as Webhooks
 import Route exposing (Route)
 import Url exposing (Url)
@@ -45,6 +46,7 @@ type PageModel
     | LoginModel Login.Model
     | CatalogModel Catalog.Model
     | BasketModel Basket.Model
+    | OrdersModel Orders.Model
     | WebhooksModel Webhooks.Model
 
 
@@ -55,6 +57,7 @@ type Msg
     | LoginMsg Login.Msg
     | CatalogMsg Catalog.Msg
     | BasketMsg Basket.Msg
+    | OrdersMsg Orders.Msg
     | WebhooksMsg Webhooks.Msg
 
 
@@ -109,6 +112,9 @@ initPage baseUrl session route =
 
         Route.Basket ->
             Basket.init baseUrl session |> mapPage BasketModel BasketMsg
+
+        Route.Orders ->
+            Orders.init baseUrl session |> mapPage OrdersModel OrdersMsg
 
         Route.Webhooks ->
             Webhooks.init baseUrl session |> mapPage WebhooksModel WebhooksMsg
@@ -170,6 +176,11 @@ update msg model =
                 |> mapPage BasketModel BasketMsg
                 |> attachToModel model
 
+        ( OrdersMsg subMsg, OrdersModel subModel ) ->
+            Orders.update subMsg subModel
+                |> mapPage OrdersModel OrdersMsg
+                |> attachToModel model
+
         ( WebhooksMsg subMsg, WebhooksModel subModel ) ->
             Webhooks.update subMsg subModel
                 |> mapPage WebhooksModel WebhooksMsg
@@ -187,6 +198,9 @@ update msg model =
             ( model, Cmd.none )
 
         ( BasketMsg _, _ ) ->
+            ( model, Cmd.none )
+
+        ( OrdersMsg _, _ ) ->
             ( model, Cmd.none )
 
         ( WebhooksMsg _, _ ) ->
@@ -217,6 +231,7 @@ viewNav =
         [ a [ Route.href Route.Home ] [ text "Home" ]
         , a [ Route.href Route.Catalog ] [ text "Catalog" ]
         , a [ Route.href Route.Basket ] [ text "Basket" ]
+        , a [ Route.href Route.Orders ] [ text "Orders" ]
         , a [ Route.href Route.Webhooks ] [ text "Webhooks" ]
         , a [ Route.href Route.Login ] [ text "Sign in" ]
         ]
@@ -236,6 +251,9 @@ viewPage page =
 
         BasketModel subModel ->
             Basket.view subModel |> Html.map BasketMsg
+
+        OrdersModel subModel ->
+            Orders.view subModel |> Html.map OrdersMsg
 
         WebhooksModel subModel ->
             Webhooks.view subModel |> Html.map WebhooksMsg

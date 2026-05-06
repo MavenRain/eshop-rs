@@ -16,6 +16,7 @@ type Route
     | Login
     | Catalog
     | Basket
+    | Orders
     | Webhooks
 
 
@@ -26,6 +27,7 @@ parser =
         , UrlParser.map Login (UrlParser.s "login")
         , UrlParser.map Catalog (UrlParser.s "catalog")
         , UrlParser.map Basket (UrlParser.s "basket")
+        , UrlParser.map Orders (UrlParser.s "orders")
         , UrlParser.map Webhooks (UrlParser.s "webhooks")
         ]
 
@@ -50,6 +52,9 @@ toString route =
 
         Basket ->
             "/basket"
+
+        Orders ->
+            "/orders"
 
         Webhooks ->
             "/webhooks"
