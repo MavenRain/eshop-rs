@@ -10,6 +10,7 @@ use core::time::Duration;
 use std::env;
 
 use event_bus_rabbitmq::{ExchangeName, QueueName, RmqConfig};
+use identity_tokens::IssuerConfig;
 
 use crate::error::Error;
 
@@ -25,6 +26,8 @@ pub struct Config {
     basket_queue: QueueName,
     ordering_subscriber_queue: QueueName,
     webhooks_delivery_queue_prefix: String,
+    jwt_secret: Vec<u8>,
+    jwt_ttl: Duration,
     poll_interval: Duration,
 }
 
@@ -56,6 +59,9 @@ impl Config {
             "ESHOP_WEBHOOKS_DELIVERY_QUEUE_PREFIX",
             "eshop-webhooks-delivery",
         );
+        let jwt_secret =
+            read_string("ESHOP_JWT_SECRET", "dev-only-jwt-secret-change-me").into_bytes();
+        let jwt_ttl = read_duration_seconds("ESHOP_JWT_TTL_SECONDS", 3600)?;
         let poll_interval = read_duration_seconds("ESHOP_POLL_INTERVAL_SECONDS", 15)?;
         Ok(Self {
             bind_address,
@@ -68,6 +74,8 @@ impl Config {
             basket_queue,
             ordering_subscriber_queue,
             webhooks_delivery_queue_prefix,
+            jwt_secret,
+            jwt_ttl,
             poll_interval,
         })
     }
@@ -154,6 +162,16 @@ impl Config {
             self.exchange.clone(),
             QueueName::from(queue),
         )
+    }
+
+    /// Build the [`IssuerConfig`] for the Identity service.  Uses
+    /// `chrono::Duration` internally because that is what the
+    /// `identity-tokens` API accepts; converted from the `Duration`
+    /// captured here.
+    #[must_use]
+    pub fn jwt_issuer(&self) -> IssuerConfig {
+        let ttl_secs = i64::try_from(self.jwt_ttl.as_secs()).unwrap_or(i64::MAX);
+        IssuerConfig::new(self.jwt_secret.clone(), chrono::Duration::seconds(ttl_secs))
     }
 
     /// Polling interval consulted by every processor.

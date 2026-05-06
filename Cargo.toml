@@ -18,6 +18,8 @@ members = [
     "crates/basket-processor",
     "crates/webhooks",
     "crates/webhooks-delivery",
+    "crates/identity-tokens",
+    "crates/identity",
     "crates/eshop-apphost",
 ]
 
@@ -44,6 +46,9 @@ toasty = { path = "../toasty/crates/toasty", features = ["sqlite", "postgresql",
 jiff = { version = "0.2", default-features = false, features = ["std"] }
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "matched-path", "query"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+argon2 = { version = "0.5", default-features = false, features = ["alloc", "password-hash", "rand"] }
+password-hash = { version = "0.5", default-features = false, features = ["alloc", "getrandom"] }
+jsonwebtoken = { version = "9", default-features = false }
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }

@@ -28,8 +28,11 @@ ordering-processor = { path = "../ordering-processor" }
 ordering-subscribers = { path = "../ordering-subscribers" }
 webhooks = { path = "../webhooks" }
 webhooks-delivery = { path = "../webhooks-delivery" }
+identity = { path = "../identity" }
+identity-tokens = { path = "../identity-tokens" }
 reqwest.workspace = true
 axum.workspace = true
+chrono.workspace = true
 futures-lite.workspace = true
 toasty.workspace = true
 toasty-driver-postgresql.workspace = true
