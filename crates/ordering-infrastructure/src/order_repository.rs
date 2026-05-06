@@ -7,6 +7,9 @@ use crate::mapper::{order_to_rows, rows_to_order};
 use crate::row::{OrderItemRow, OrderRow};
 
 /// Persistence boundary for the [`Order`] aggregate.
+///
+/// `OrderRow::user_id` is keyed by the JWT principal's user-id string;
+/// see [`OrderRepository::list_by_user_id`].
 pub struct OrderRepository;
 
 impl OrderRepository {
@@ -23,6 +26,7 @@ impl OrderRepository {
         let (head, items) = order_to_rows(order)?;
         toasty::create!(OrderRow {
             id: head.id,
+            user_id: head.user_id,
             order_date: head.order_date,
             order_status: head.order_status,
             description: head.description,
@@ -70,6 +74,35 @@ impl OrderRepository {
         let items = row.items().exec(executor).await?;
         let item_vec: Vec<OrderItemRow> = items;
         rows_to_order(&row, &item_vec)
+    }
+
+    /// List orders owned by the given JWT user id.  Each order's items are
+    /// loaded eagerly and the rows are mapped back into [`Order`]
+    /// aggregates.  Order is unspecified.
+    ///
+    /// # Errors
+    /// Propagates toasty errors and mapping errors.
+    pub async fn list_by_user_id<E>(executor: &mut E, user_id: &str) -> Result<Vec<Order>, Error>
+    where
+        E: toasty::Executor,
+    {
+        let needle = user_id.to_string();
+        let rows: Vec<OrderRow> = toasty::query!(
+            OrderRow FILTER .user_id == #needle
+        )
+        .exec(executor)
+        .await?;
+        // Sequential async hydrate.  Same FFI exception as `add`: each
+        // `row.items().exec(executor)` step needs a fresh `&mut Executor`
+        // borrow, which `futures_lite::stream` combinators cannot pass
+        // through without `Box<dyn Future>` (no-`dyn` rule).  The `let mut
+        // out` accumulator is part of the same exception.
+        let mut out: Vec<Order> = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let items: Vec<OrderItemRow> = row.items().exec(executor).await?;
+            out.push(rows_to_order(row, &items)?);
+        }
+        Ok(out)
     }
 
     /// Update only the `order_status` and `description` of an existing order.

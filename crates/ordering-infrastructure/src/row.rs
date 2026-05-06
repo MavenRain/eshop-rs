@@ -14,6 +14,9 @@ pub struct OrderRow {
     #[auto]
     pub id: Uuid,
 
+    #[index]
+    pub user_id: String,
+
     pub order_date: Timestamp,
 
     pub order_status: String,

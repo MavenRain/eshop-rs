@@ -8,7 +8,7 @@ use ordering_domain::{
     Address, Buyer, BuyerId, CardAlias, CardExpiration, CardHolderName, CardNumber, CardType, City,
     Country, Description, Discount, IdentityGuid, Money, Order, OrderDate, OrderId, OrderItem,
     OrderItemId, OrderStatus, PaymentMethod, PaymentMethodId, PictureUrl, ProductId, ProductName,
-    SecurityNumber, State, Street, UnitPrice, Units, UserName, ZipCode,
+    SecurityNumber, State, Street, UnitPrice, Units, UserId, UserName, ZipCode,
 };
 
 use crate::error::Error;
@@ -21,6 +21,7 @@ pub fn order_to_rows(order: &Order) -> Result<(NewOrderRow, Vec<NewOrderItemRow>
     let order_id = order.id().into_uuid();
     let row = NewOrderRow {
         id: order_id,
+        user_id: order.user_id().as_str().to_string(),
         order_date: chrono_to_jiff(order.order_date().into_inner())?,
         order_status: order.order_status().to_string(),
         description: order.description().as_str().to_string(),
@@ -75,6 +76,7 @@ pub fn rows_to_order(row: &OrderRow, items: &[OrderItemRow]) -> Result<Order, Er
         .collect::<Result<Vec<_>, Error>>()?;
     Ok(Order::rehydrate(
         OrderId::from(row.id),
+        UserId::try_from(row.user_id.clone())?,
         order_date,
         address,
         row.buyer_id.map(BuyerId::from),
@@ -169,6 +171,7 @@ fn row_to_payment_method(row: &PaymentMethodRow) -> Result<PaymentMethod, Error>
 #[derive(Debug, Clone)]
 pub struct NewOrderRow {
     pub id: uuid::Uuid,
+    pub user_id: String,
     pub order_date: jiff::Timestamp,
     pub order_status: String,
     pub description: String,

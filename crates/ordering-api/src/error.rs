@@ -10,6 +10,8 @@ pub enum Error {
     Validation { reason: String },
     /// The requested order does not exist.
     NotFound { reason: String },
+    /// Caller is authenticated but not authorized to access this order.
+    Forbidden { reason: String },
     /// Domain rejected the operation (e.g., illegal status transition).
     Domain { reason: String },
     /// Persistence layer failure.
@@ -25,6 +27,7 @@ impl core::fmt::Display for Error {
         match self {
             Self::Validation { reason } => write!(f, "validation: {reason}"),
             Self::NotFound { reason } => write!(f, "not found: {reason}"),
+            Self::Forbidden { reason } => write!(f, "forbidden: {reason}"),
             Self::Domain { reason } => write!(f, "domain: {reason}"),
             Self::Infrastructure { reason } => write!(f, "infrastructure: {reason}"),
             Self::Json { reason } => write!(f, "json: {reason}"),
@@ -74,6 +77,7 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST
             }
             Self::NotFound { .. } => StatusCode::NOT_FOUND,
+            Self::Forbidden { .. } => StatusCode::FORBIDDEN,
             Self::Infrastructure { .. } | Self::Toasty { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status, self.to_string()).into_response()
@@ -132,6 +136,14 @@ mod tests {
             reason: "x".to_string(),
         });
         check(actual == StatusCode::NOT_FOUND, || format!("got {actual}"))
+    }
+
+    #[test]
+    fn forbidden_maps_to_403() -> Result<(), Error> {
+        let actual = status_for(Error::Forbidden {
+            reason: "x".to_string(),
+        });
+        check(actual == StatusCode::FORBIDDEN, || format!("got {actual}"))
     }
 
     #[test]

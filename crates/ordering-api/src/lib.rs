@@ -1,21 +1,29 @@
 //! HTTP API for the Ordering bounded context.
 //!
-//! Exposes a [`build_router`] that wires the four endpoints used by upstream:
+//! Exposes a [`build_router`] that wires the upstream-aligned endpoints,
+//! all under the `/api/orders` prefix:
 //!
-//! - `POST /orders` create an order
-//! - `PUT /orders/cancel` cancel an order
-//! - `PUT /orders/ship` ship an order
-//! - `GET /orders/:id` fetch an order by id
+//! - `GET    /api/orders`        list orders owned by the authenticated
+//!   caller.
+//! - `GET    /api/orders/{id}`   fetch one order owned by the
+//!   authenticated caller.
+//! - `POST   /api/orders`        create an order (admin/test).
+//! - `PUT    /api/orders/cancel` cancel an order (admin/test).
+//! - `PUT    /api/orders/ship`   ship an order (admin/test).
+//!
+//! The two read endpoints are JWT-gated; the three write endpoints are
+//! left ungated for now since the user-facing checkout path mints orders
+//! through the basket-checkout saga, not through HTTP.
 //!
 //! Each command handler runs inside a toasty [`Transaction`](toasty::Transaction):
 //! the aggregate change and the matching outbox writes commit atomically.
-//! A separate worker drains the outbox and publishes through `event-bus`;
-//! that worker is step 9 of the punchlist (`OrderProcessor`).
+//! A separate worker drains the outbox and publishes through `event-bus`.
 
 mod cancel_order;
 mod create_order;
 mod error;
 mod get_order;
+mod list_orders;
 mod outbox;
 mod request;
 mod response;
@@ -30,14 +38,17 @@ pub use response::{CreateOrderResponse, GetOrderResponse, OrderItemResponse};
 pub use state::AppState;
 
 use axum::Router;
-use axum::routing::{get, post, put};
+use axum::routing::{get, put};
 
 /// Build the axum [`Router`] for the Ordering API, with `state` injected.
 pub fn build_router(state: AppState) -> Router {
     Router::new()
-        .route("/orders", post(create_order::handle))
-        .route("/orders/cancel", put(cancel_order::handle))
-        .route("/orders/ship", put(ship_order::handle))
-        .route("/orders/{id}", get(get_order::handle))
+        .route(
+            "/api/orders",
+            get(list_orders::handle).post(create_order::handle),
+        )
+        .route("/api/orders/cancel", put(cancel_order::handle))
+        .route("/api/orders/ship", put(ship_order::handle))
+        .route("/api/orders/{id}", get(get_order::handle))
         .with_state(state)
 }

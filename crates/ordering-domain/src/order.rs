@@ -126,6 +126,7 @@ impl From<Description> for String {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Order {
     id: OrderId,
+    user_id: UserId,
     order_date: OrderDate,
     address: Address,
     buyer_id: Option<BuyerId>,
@@ -145,6 +146,7 @@ impl Order {
     #[must_use]
     pub fn rehydrate(
         id: OrderId,
+        user_id: UserId,
         order_date: OrderDate,
         address: Address,
         buyer_id: Option<BuyerId>,
@@ -155,6 +157,7 @@ impl Order {
     ) -> Self {
         Self {
             id,
+            user_id,
             order_date,
             address,
             buyer_id,
@@ -185,7 +188,7 @@ impl Order {
     ) -> Self {
         let event = DomainEvent::OrderStarted(OrderStartedEvent::new(
             id,
-            user_id,
+            user_id.clone(),
             user_name,
             card_type,
             card_number,
@@ -195,6 +198,7 @@ impl Order {
         ));
         Self {
             id,
+            user_id,
             order_date: OrderDate::now(),
             address,
             buyer_id,
@@ -210,6 +214,12 @@ impl Order {
     #[must_use]
     pub fn id(&self) -> OrderId {
         self.id
+    }
+
+    /// External identity provider's user id (the order's owner).
+    #[must_use]
+    pub fn user_id(&self) -> &UserId {
+        &self.user_id
     }
 
     /// Order date.

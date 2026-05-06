@@ -11,6 +11,7 @@ repository.workspace = true
 ordering-domain = { path = "../ordering-domain" }
 ordering-infrastructure = { path = "../ordering-infrastructure" }
 ordering-integration-events = { path = "../ordering-integration-events" }
+identity-middleware = { path = "../identity-middleware" }
 event-bus = { path = "../event-bus" }
 toasty.workspace = true
 axum.workspace = true

@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
     let db = Arc::new(build_db(config.database_url()).await?);
 
     let validator_state = ValidatorState::new(config.jwt_validator());
-    let ordering_state = ordering_api::AppState::new(db.clone());
+    let ordering_state = ordering_api::AppState::new(db.clone(), validator_state.clone());
     let catalog_state = catalog::AppState::new(db.clone());
     let basket_state = basket::AppState::new(db.clone(), validator_state.clone());
     let webhooks_state = webhooks::AppState::new(db.clone(), validator_state.clone());
