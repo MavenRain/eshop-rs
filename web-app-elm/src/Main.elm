@@ -135,9 +135,24 @@ update msg model =
                 |> attachToModel model
 
         ( LoginMsg subMsg, LoginModel subModel ) ->
-            Login.update subMsg subModel
-                |> mapPage LoginModel LoginMsg
-                |> attachToModel model
+            let
+                ( updatedSubModel, subCmd ) =
+                    Login.update model.baseUrl model.session subMsg subModel
+
+                ( consumedSubModel, maybeToken ) =
+                    Login.consumeToken updatedSubModel
+
+                nextSession =
+                    maybeToken
+                        |> Maybe.map Api.withToken
+                        |> Maybe.withDefault model.session
+            in
+            ( { model
+                | page = LoginModel consumedSubModel
+                , session = nextSession
+              }
+            , Cmd.map LoginMsg subCmd
+            )
 
         ( CatalogMsg subMsg, CatalogModel subModel ) ->
             Catalog.update subMsg subModel
