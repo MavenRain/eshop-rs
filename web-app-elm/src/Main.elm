@@ -74,20 +74,26 @@ init rawFlags url key =
             D.decodeValue flagsDecoder rawFlags
                 |> Result.withDefault { apiBase = "http://127.0.0.1:8080" }
 
+        baseUrl =
+            Api.baseUrlFromString flags.apiBase
+
+        session =
+            Api.unauthenticated
+
         ( pageModel, pageCmd ) =
-            initPage (Route.fromUrl url)
+            initPage baseUrl session (Route.fromUrl url)
     in
     ( { key = key
-      , baseUrl = Api.baseUrlFromString flags.apiBase
-      , session = Api.unauthenticated
+      , baseUrl = baseUrl
+      , session = session
       , page = pageModel
       }
     , pageCmd
     )
 
 
-initPage : Route -> ( PageModel, Cmd Msg )
-initPage route =
+initPage : BaseUrl -> Session -> Route -> ( PageModel, Cmd Msg )
+initPage baseUrl session route =
     case route of
         Route.Home ->
             Home.init |> mapPage HomeModel HomeMsg
@@ -96,7 +102,7 @@ initPage route =
             Login.init |> mapPage LoginModel LoginMsg
 
         Route.Catalog ->
-            Catalog.init |> mapPage CatalogModel CatalogMsg
+            Catalog.init baseUrl session |> mapPage CatalogModel CatalogMsg
 
         Route.Basket ->
             Basket.init |> mapPage BasketModel BasketMsg
@@ -119,7 +125,7 @@ update msg model =
         ( UrlChanged url, _ ) ->
             let
                 ( pageModel, pageCmd ) =
-                    initPage (Route.fromUrl url)
+                    initPage model.baseUrl model.session (Route.fromUrl url)
             in
             ( { model | page = pageModel }, pageCmd )
 
