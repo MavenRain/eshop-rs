@@ -1,3 +1,5 @@
 /target
 **/*.rs.bk
 .DS_Store
+web-app-elm/elm-stuff/
+web-app-elm/dist/
