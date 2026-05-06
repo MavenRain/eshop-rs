@@ -105,7 +105,7 @@ initPage baseUrl session route =
             Catalog.init baseUrl session |> mapPage CatalogModel CatalogMsg
 
         Route.Basket ->
-            Basket.init |> mapPage BasketModel BasketMsg
+            Basket.init baseUrl session |> mapPage BasketModel BasketMsg
 
 
 mapPage : (subModel -> PageModel) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( PageModel, Cmd Msg )

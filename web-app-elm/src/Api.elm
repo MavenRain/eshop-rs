@@ -5,6 +5,7 @@ module Api exposing
     , baseUrlToString
     , get
     , post
+    , put
     , unauthenticated
     , withToken
     )
@@ -116,6 +117,29 @@ post :
 post base session path body decoder toMsg =
     Http.request
         { method = "POST"
+        , headers = authHeaders session
+        , url = baseUrlToString base ++ path
+        , body = Http.jsonBody body
+        , expect = Http.expectJson toMsg decoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+{-| PUT `<base>/<path>` with a JSON body, decoding the JSON
+response.
+-}
+put :
+    BaseUrl
+    -> Session
+    -> String
+    -> E.Value
+    -> D.Decoder a
+    -> (Result Http.Error a -> msg)
+    -> Cmd msg
+put base session path body decoder toMsg =
+    Http.request
+        { method = "PUT"
         , headers = authHeaders session
         , url = baseUrlToString base ++ path
         , body = Http.jsonBody body
