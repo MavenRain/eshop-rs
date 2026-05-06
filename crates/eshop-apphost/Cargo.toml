@@ -29,6 +29,7 @@ ordering-subscribers = { path = "../ordering-subscribers" }
 webhooks = { path = "../webhooks" }
 webhooks-delivery = { path = "../webhooks-delivery" }
 identity = { path = "../identity" }
+identity-middleware = { path = "../identity-middleware" }
 identity-tokens = { path = "../identity-tokens" }
 reqwest.workspace = true
 axum.workspace = true

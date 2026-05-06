@@ -1,6 +1,7 @@
-//! `POST /api/basket/:customer_id/checkout` handler.
+//! `POST /api/basket/checkout` handler.
 //!
-//! Loads the basket, validates it is non-empty, deletes it, writes a
+//! Loads the basket for the authenticated principal, validates it
+//! is non-empty, deletes it, writes a
 //! [`UserCheckoutAcceptedIntegrationEvent`](basket_integration_events::USER_CHECKOUT_ACCEPTED)
 //! row to the outbox, and returns the basket snapshot.  The basket
 //! delete and the outbox write commit in the same toasty transaction;
@@ -8,7 +9,8 @@
 //! the bus.
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::State;
+use identity_middleware::AuthenticatedPrincipal;
 use uuid::Uuid;
 
 use crate::customer::CustomerId;
@@ -22,9 +24,9 @@ use crate::state::AppState;
 
 pub async fn handle(
     State(state): State<AppState>,
-    Path(customer_id): Path<Uuid>,
+    principal: AuthenticatedPrincipal,
 ) -> Result<Json<BasketResponse>, Error> {
-    let id = CustomerId::from(customer_id);
+    let id = CustomerId::from(principal.principal().user_id());
     // FFI-mut exception: see `update_basket::handle`.
     let mut conn = state.db().connection().await?;
     let mut tx = conn.transaction().await?;

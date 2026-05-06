@@ -19,6 +19,7 @@ members = [
     "crates/webhooks",
     "crates/webhooks-delivery",
     "crates/identity-tokens",
+    "crates/identity-middleware",
     "crates/identity",
     "crates/eshop-apphost",
 ]

@@ -1,0 +1,15 @@
+[package]
+name = "identity-middleware"
+description = "axum extractor that validates a JWT bearer token and yields an identity-tokens Principal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+identity-tokens = { path = "../identity-tokens" }
+axum.workspace = true
+
+[lints]
+workspace = true

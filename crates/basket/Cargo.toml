@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 basket-integration-events = { path = "../basket-integration-events" }
 event-bus = { path = "../event-bus" }
+identity-middleware = { path = "../identity-middleware" }
 ordering-integration-events = { path = "../ordering-integration-events" }
 axum.workspace = true
 chrono.workspace = true

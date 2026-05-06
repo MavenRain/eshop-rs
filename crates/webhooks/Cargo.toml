@@ -8,6 +8,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+identity-middleware = { path = "../identity-middleware" }
 axum.workspace = true
 chrono.workspace = true
 jiff.workspace = true

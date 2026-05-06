@@ -11,16 +11,17 @@
 //!
 //! # Endpoints
 //!
-//! - `GET    /api/webhooks?grantor_id=...`   list subscriptions for the
-//!   given grantor.
-//! - `GET    /api/webhooks/{id}`              fetch one.
-//! - `POST   /api/webhooks`                   register a new
-//!   subscription.
-//! - `DELETE /api/webhooks/{id}`              drop one.
+//! - `GET    /api/webhooks`        list subscriptions owned by the
+//!   authenticated caller.
+//! - `GET    /api/webhooks/{id}`   fetch one.
+//! - `POST   /api/webhooks`        register a new subscription
+//!   owned by the authenticated caller.
+//! - `DELETE /api/webhooks/{id}`   drop one.
 //!
-//! Authentication is intentionally absent at this layer; the request
-//! body / query string carry `grantor_id` directly until an identity
-//! bounded context lands.
+//! Every endpoint requires a valid JWT bearer token; the
+//! [`AuthenticatedPrincipal`](identity_middleware::AuthenticatedPrincipal)
+//! extractor reads it from the `Authorization` header and yields
+//! the caller's identity.
 
 mod delete_subscription;
 pub mod error;
@@ -39,7 +40,7 @@ mod time;
 
 pub use error::Error;
 pub use repository::WebhookSubscriptionRepository;
-pub use request::{ListSubscriptionsQuery, RegisterSubscriptionRequest};
+pub use request::RegisterSubscriptionRequest;
 pub use response::{CreatedSubscriptionResponse, WebhookSubscriptionResponse};
 pub use state::AppState;
 pub use strings::{WebhookToken, WebhookType, WebhookUrl};
@@ -50,9 +51,11 @@ use axum::routing::get;
 
 /// Build the axum [`Router`] for the Webhooks API, with `state` injected.
 ///
+/// Every route requires a valid JWT bearer token (see crate-level docs).
+///
 /// Routes:
 ///
-/// - `GET    /api/webhooks?grantor_id=...`
+/// - `GET    /api/webhooks`
 /// - `POST   /api/webhooks`
 /// - `GET    /api/webhooks/{id}`
 /// - `DELETE /api/webhooks/{id}`

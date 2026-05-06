@@ -10,7 +10,7 @@ use core::time::Duration;
 use std::env;
 
 use event_bus_rabbitmq::{ExchangeName, QueueName, RmqConfig};
-use identity_tokens::IssuerConfig;
+use identity_tokens::{IssuerConfig, ValidatorConfig};
 
 use crate::error::Error;
 
@@ -172,6 +172,15 @@ impl Config {
     pub fn jwt_issuer(&self) -> IssuerConfig {
         let ttl_secs = i64::try_from(self.jwt_ttl.as_secs()).unwrap_or(i64::MAX);
         IssuerConfig::new(self.jwt_secret.clone(), chrono::Duration::seconds(ttl_secs))
+    }
+
+    /// Build the [`ValidatorConfig`] for context APIs that
+    /// authenticate via JWT.  Uses the same HMAC secret as
+    /// [`Config::jwt_issuer`] — issuer and consumers share a key in
+    /// the symmetric-signing v1.
+    #[must_use]
+    pub fn jwt_validator(&self) -> ValidatorConfig {
+        ValidatorConfig::new(self.jwt_secret.clone())
     }
 
     /// Polling interval consulted by every processor.

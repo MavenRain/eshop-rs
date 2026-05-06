@@ -1,4 +1,9 @@
-//! Request DTOs deserialized from JSON bodies and query strings.
+//! Request DTOs deserialized from JSON bodies.
+//!
+//! `grantor_id` is no longer in the request shape; it comes from
+//! the authenticated principal at the handler boundary.  The list
+//! endpoint similarly takes no query string — it lists subscriptions
+//! owned by the authenticated caller.
 
 use chrono::Utc;
 use serde::Deserialize;
@@ -9,46 +14,29 @@ use crate::strings::{WebhookToken, WebhookType, WebhookUrl};
 use crate::subscription::{WebhookSubscription, WebhookSubscriptionId};
 
 /// `POST /api/webhooks` body.
-///
-/// `grantor_id` is caller-supplied for v1.  Once an identity bounded
-/// context lands, it will come from the authenticated principal
-/// instead and will be removed from the request shape.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RegisterSubscriptionRequest {
     webhook_type: String,
     destination_url: String,
     token: String,
-    grantor_id: Uuid,
 }
 
 impl RegisterSubscriptionRequest {
-    /// Project this request into a fresh [`WebhookSubscription`].
+    /// Project this request into a fresh [`WebhookSubscription`]
+    /// owned by `grantor_id` (supplied by the handler from the
+    /// authenticated principal).
     ///
     /// # Errors
     /// Returns [`Error::EmptyString`] for blank fields.
-    pub fn try_into_subscription(self) -> Result<WebhookSubscription, Error> {
+    pub fn try_into_subscription(self, grantor_id: Uuid) -> Result<WebhookSubscription, Error> {
         Ok(WebhookSubscription::new(
             WebhookSubscriptionId::new(),
             WebhookType::try_from(self.webhook_type)?,
             WebhookUrl::try_from(self.destination_url)?,
             WebhookToken::try_from(self.token)?,
-            self.grantor_id,
+            grantor_id,
             Utc::now(),
         ))
-    }
-}
-
-/// `GET /api/webhooks?grantor_id=...` query string.
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub struct ListSubscriptionsQuery {
-    grantor_id: Uuid,
-}
-
-impl ListSubscriptionsQuery {
-    /// Grantor whose subscriptions the caller wants.
-    #[must_use]
-    pub fn grantor_id(&self) -> Uuid {
-        self.grantor_id
     }
 }
 
@@ -69,15 +57,13 @@ mod tests {
             webhook_type: "OrderShippedIntegrationEvent".to_string(),
             destination_url: "https://example.test/hook".to_string(),
             token: "secret".to_string(),
-            grantor_id: Uuid::new_v4(),
         }
     }
 
     #[test]
     fn register_projects_to_subscription() -> Result<(), Error> {
-        let request = valid_register_request();
-        let grantor = request.grantor_id;
-        let subscription = request.try_into_subscription()?;
+        let grantor = Uuid::new_v4();
+        let subscription = valid_register_request().try_into_subscription(grantor)?;
         check(
             subscription.webhook_type().as_str() == "OrderShippedIntegrationEvent",
             || format!("type {}", subscription.webhook_type().as_str()),
@@ -93,7 +79,7 @@ mod tests {
             token: String::new(),
             ..valid_register_request()
         };
-        let outcome = request.try_into_subscription();
+        let outcome = request.try_into_subscription(Uuid::new_v4());
         check(
             matches!(
                 outcome,
@@ -111,7 +97,7 @@ mod tests {
             destination_url: String::new(),
             ..valid_register_request()
         };
-        let outcome = request.try_into_subscription();
+        let outcome = request.try_into_subscription(Uuid::new_v4());
         check(
             matches!(
                 outcome,

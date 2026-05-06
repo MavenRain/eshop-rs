@@ -70,22 +70,23 @@ use axum::routing::get;
 
 /// Build the axum [`Router`] for the Basket API, with `state` injected.
 ///
-/// Routes mirror upstream `Basket.API`'s endpoints, REST-shaped:
+/// Customer identity is read from the authenticated principal
+/// (Authorization: Bearer …), not the URL.  Routes:
 ///
-/// - `GET    /api/basket/{customer_id}`
-/// - `PUT    /api/basket/{customer_id}`
-/// - `DELETE /api/basket/{customer_id}`
-/// - `POST   /api/basket/{customer_id}/checkout`
+/// - `GET    /api/basket`
+/// - `PUT    /api/basket`
+/// - `DELETE /api/basket`
+/// - `POST   /api/basket/checkout`
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route(
-            "/api/basket/{customer_id}",
+            "/api/basket",
             get(get_basket::handle)
                 .put(update_basket::handle)
                 .delete(delete_basket::handle),
         )
         .route(
-            "/api/basket/{customer_id}/checkout",
+            "/api/basket/checkout",
             axum::routing::post(checkout_basket::handle),
         )
         .with_state(state)

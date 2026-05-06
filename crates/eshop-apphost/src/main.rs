@@ -44,6 +44,7 @@ use event_bus::{EventBus, EventBusSubscriber};
 use event_bus_rabbitmq::RabbitMqEventBus;
 use futures_lite::stream::StreamExt;
 use identity::row::UserRow;
+use identity_middleware::ValidatorState;
 use ordering_infrastructure::row::{
     BuyerRow, IntegrationEventLogRow, OrderItemRow, OrderRow, PaymentMethodRow,
 };
@@ -65,10 +66,11 @@ async fn main() -> Result<(), Error> {
     let config = Config::from_env()?;
     let db = Arc::new(build_db(config.database_url()).await?);
 
+    let validator_state = ValidatorState::new(config.jwt_validator());
     let ordering_state = ordering_api::AppState::new(db.clone());
     let catalog_state = catalog::AppState::new(db.clone());
-    let basket_state = basket::AppState::new(db.clone());
-    let webhooks_state = webhooks::AppState::new(db.clone());
+    let basket_state = basket::AppState::new(db.clone(), validator_state.clone());
+    let webhooks_state = webhooks::AppState::new(db.clone(), validator_state.clone());
     let identity_state = identity::AppState::new(db.clone(), config.jwt_issuer());
 
     let ordering_bus =
