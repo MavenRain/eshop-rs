@@ -14,6 +14,7 @@ import Url.Parser as UrlParser exposing ((</>), Parser)
 type Route
     = Home
     | Login
+    | Register
     | Catalog
     | Basket
     | Orders
@@ -25,6 +26,7 @@ parser =
     UrlParser.oneOf
         [ UrlParser.map Home UrlParser.top
         , UrlParser.map Login (UrlParser.s "login")
+        , UrlParser.map Register (UrlParser.s "register")
         , UrlParser.map Catalog (UrlParser.s "catalog")
         , UrlParser.map Basket (UrlParser.s "basket")
         , UrlParser.map Orders (UrlParser.s "orders")
@@ -46,6 +48,9 @@ toString route =
 
         Login ->
             "/login"
+
+        Register ->
+            "/register"
 
         Catalog ->
             "/catalog"

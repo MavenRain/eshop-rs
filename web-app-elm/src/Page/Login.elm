@@ -6,12 +6,13 @@ token to `Main` via [`consumeToken`](#consumeToken).
 -}
 
 import Api exposing (BaseUrl, Session)
-import Html exposing (Html, button, div, form, input, label, p, text)
+import Html exposing (Html, a, button, div, form, input, label, p, text)
 import Html.Attributes exposing (disabled, placeholder, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D
 import Json.Encode as E
+import Route
 
 
 type alias Model =
@@ -147,6 +148,11 @@ view model =
                 [ text (submitLabel model.status) ]
             ]
         , viewStatus model.status
+        , p []
+            [ text "No account? "
+            , a [ Route.href Route.Register ] [ text "Register here" ]
+            , text "."
+            ]
         ]
 
 

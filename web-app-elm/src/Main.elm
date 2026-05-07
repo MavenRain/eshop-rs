@@ -19,6 +19,7 @@ import Page.Catalog as Catalog
 import Page.Home as Home
 import Page.Login as Login
 import Page.Orders as Orders
+import Page.Register as Register
 import Page.Webhooks as Webhooks
 import Route exposing (Route)
 import Url exposing (Url)
@@ -44,6 +45,7 @@ type alias Model =
 type PageModel
     = HomeModel Home.Model
     | LoginModel Login.Model
+    | RegisterModel Register.Model
     | CatalogModel Catalog.Model
     | BasketModel Basket.Model
     | OrdersModel Orders.Model
@@ -55,6 +57,7 @@ type Msg
     | UrlChanged Url
     | HomeMsg Home.Msg
     | LoginMsg Login.Msg
+    | RegisterMsg Register.Msg
     | CatalogMsg Catalog.Msg
     | BasketMsg Basket.Msg
     | OrdersMsg Orders.Msg
@@ -106,6 +109,9 @@ initPage baseUrl session route =
 
         Route.Login ->
             Login.init |> mapPage LoginModel LoginMsg
+
+        Route.Register ->
+            Register.init |> mapPage RegisterModel RegisterMsg
 
         Route.Catalog ->
             Catalog.init baseUrl session |> mapPage CatalogModel CatalogMsg
@@ -166,6 +172,11 @@ update msg model =
             , Cmd.map LoginMsg subCmd
             )
 
+        ( RegisterMsg subMsg, RegisterModel subModel ) ->
+            Register.update model.baseUrl model.session subMsg subModel
+                |> mapPage RegisterModel RegisterMsg
+                |> attachToModel model
+
         ( CatalogMsg subMsg, CatalogModel subModel ) ->
             Catalog.update subMsg subModel
                 |> mapPage CatalogModel CatalogMsg
@@ -192,6 +203,9 @@ update msg model =
             ( model, Cmd.none )
 
         ( LoginMsg _, _ ) ->
+            ( model, Cmd.none )
+
+        ( RegisterMsg _, _ ) ->
             ( model, Cmd.none )
 
         ( CatalogMsg _, _ ) ->
@@ -234,6 +248,7 @@ viewNav =
         , a [ Route.href Route.Orders ] [ text "Orders" ]
         , a [ Route.href Route.Webhooks ] [ text "Webhooks" ]
         , a [ Route.href Route.Login ] [ text "Sign in" ]
+        , a [ Route.href Route.Register ] [ text "Register" ]
         ]
 
 
@@ -245,6 +260,9 @@ viewPage page =
 
         LoginModel subModel ->
             Login.view subModel |> Html.map LoginMsg
+
+        RegisterModel subModel ->
+            Register.view subModel |> Html.map RegisterMsg
 
         CatalogModel subModel ->
             Catalog.view subModel |> Html.map CatalogMsg
